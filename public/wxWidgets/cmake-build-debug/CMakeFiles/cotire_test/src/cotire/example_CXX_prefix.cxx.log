@@ -1,0 +1,10 @@
+Multiple include guards may be useful for:
+D:/Code/Ray/public/wxWidgets/build/cmake/modules/cotire_test/src/example.cpp
+D:/Code/Ray/public/wxWidgets/build/cmake/modules/cotire_test/src/log.cpp
+D:/Code/Ray/public/wxWidgets/build/cmake/modules/cotire_test/src/main.cpp
+d:/mingw/include/time.h
+d:/mingw/lib/gcc/mingw32/6.3.0/include/c++/clocale
+d:/mingw/lib/gcc/mingw32/6.3.0/include/c++/cstdlib
+d:/mingw/lib/gcc/mingw32/6.3.0/include/c++/cwctype
+d:/mingw/lib/gcc/mingw32/6.3.0/include/c++/mingw32/bits/ctype_base.h
+d:/mingw/lib/gcc/mingw32/6.3.0/include/c++/mingw32/bits/ctype_inline.h

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/3rdparty/catch" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/expat" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/jpeg" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/png" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/tiff" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/zlib" vcs="Git" />
+  </component>
+</project>

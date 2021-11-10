@@ -1,0 +1,10 @@
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/CMakeFiles/edit_cache.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/CMakeFiles/rebuild_cache.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/example.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/example_unity.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/all_unity.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/clean_cotire.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/rebuild_cache.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/example_pch.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/edit_cache.dir
+D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/cotire_test/src/CMakeFiles/all_pch.dir

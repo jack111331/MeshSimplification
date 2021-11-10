@@ -1,0 +1,154 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):D:/MinGW/bin/make.exe cmTC_1a1fa/fast && D:/MinGW/bin/make.exe -f CMakeFiles\cmTC_1a1fa.dir\build.make CMakeFiles/cmTC_1a1fa.dir/build
+make.exe[1]: Entering directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1a1fa.dir/src.c.obj
+D:\MinGW\bin\gcc.exe   -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles\cmTC_1a1fa.dir\src.c.obj   -c D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.c
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.c: In function 'main':
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.c:14:3: warning: implicit declaration of function 'pthread_atfork' [-Wimplicit-function-declaration]
+   pthread_atfork(NULL, NULL, NULL);
+   ^~~~~~~~~~~~~~
+Linking C executable cmTC_1a1fa.exe
+"D:\Program Files\JetBrains\CLion 2019.2.4\bin\cmake\win\bin\cmake.exe" -E cmake_link_script CMakeFiles\cmTC_1a1fa.dir\link.txt --verbose=1
+"D:\Program Files\JetBrains\CLion 2019.2.4\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\cmTC_1a1fa.dir/objects.a
+D:\MinGW\bin\ar.exe cr CMakeFiles\cmTC_1a1fa.dir/objects.a @CMakeFiles\cmTC_1a1fa.dir\objects1.rsp
+D:\MinGW\bin\gcc.exe  -DCMAKE_HAVE_LIBC_PTHREAD    -Wl,--whole-archive CMakeFiles\cmTC_1a1fa.dir/objects.a -Wl,--no-whole-archive  -o cmTC_1a1fa.exe -Wl,--out-implib,libcmTC_1a1fa.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\cmTC_1a1fa.dir\linklibs.rsp
+CMakeFiles\cmTC_1a1fa.dir/objects.a(src.c.obj):src.c:(.text+0x36): undefined reference to `pthread_create'
+CMakeFiles\cmTC_1a1fa.dir/objects.a(src.c.obj):src.c:(.text+0x4a): undefined reference to `pthread_detach'
+CMakeFiles\cmTC_1a1fa.dir/objects.a(src.c.obj):src.c:(.text+0x66): undefined reference to `pthread_join'
+CMakeFiles\cmTC_1a1fa.dir/objects.a(src.c.obj):src.c:(.text+0x82): undefined reference to `pthread_atfork'
+CMakeFiles\cmTC_1a1fa.dir/objects.a(src.c.obj):src.c:(.text+0x8e): undefined reference to `pthread_exit'
+collect2.exe: error: ld returned 1 exit status
+make.exe[1]: *** [cmTC_1a1fa.exe] Error 1
+make.exe[1]: Leaving directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+make.exe: *** [cmTC_1a1fa/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):D:/MinGW/bin/make.exe cmTC_df53c/fast && D:/MinGW/bin/make.exe -f CMakeFiles\cmTC_df53c.dir\build.make CMakeFiles/cmTC_df53c.dir/build
+make.exe[1]: Entering directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_df53c.dir/CheckFunctionExists.c.obj
+D:\MinGW\bin\gcc.exe   -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles\cmTC_df53c.dir\CheckFunctionExists.c.obj   -c "D:\Program Files\JetBrains\CLion 2019.2.4\bin\cmake\win\share\cmake-3.16\Modules\CheckFunctionExists.c"
+Linking C executable cmTC_df53c.exe
+"D:\Program Files\JetBrains\CLion 2019.2.4\bin\cmake\win\bin\cmake.exe" -E cmake_link_script CMakeFiles\cmTC_df53c.dir\link.txt --verbose=1
+"D:\Program Files\JetBrains\CLion 2019.2.4\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\cmTC_df53c.dir/objects.a
+D:\MinGW\bin\ar.exe cr CMakeFiles\cmTC_df53c.dir/objects.a @CMakeFiles\cmTC_df53c.dir\objects1.rsp
+D:\MinGW\bin\gcc.exe  -DCHECK_FUNCTION_EXISTS=pthread_create    -Wl,--whole-archive CMakeFiles\cmTC_df53c.dir/objects.a -Wl,--no-whole-archive  -o cmTC_df53c.exe -Wl,--out-implib,libcmTC_df53c.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\cmTC_df53c.dir\linklibs.rsp
+d:/mingw/bin/../lib/gcc/mingw32/6.3.0/../../../../mingw32/bin/ld.exe: cannot find -lpthreads
+collect2.exe: error: ld returned 1 exit status
+make.exe[1]: *** [cmTC_df53c.exe] Error 1
+make.exe[1]: Leaving directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+make.exe: *** [cmTC_df53c/fast] Error 2
+
+
+
+Performing C SOURCE FILE Test HAVE_WINHTTP_H failed with the following output:
+Change Dir: D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):D:/MinGW/bin/make.exe cmTC_4f43b/fast && D:/MinGW/bin/make.exe -f CMakeFiles\cmTC_4f43b.dir\build.make CMakeFiles/cmTC_4f43b.dir/build
+make.exe[1]: Entering directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_4f43b.dir/src.c.obj
+D:\MinGW\bin\gcc.exe   -DHAVE_WINHTTP_H   -o CMakeFiles\cmTC_4f43b.dir\src.c.obj   -c D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.c
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.c:2:54: fatal error: winhttp.h: No such file or directory
+                                  #include <winhttp.h>
+                                                      ^
+compilation terminated.
+make.exe[1]: *** [CMakeFiles/cmTC_4f43b.dir/src.c.obj] Error 1
+make.exe[1]: Leaving directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+make.exe: *** [cmTC_4f43b/fast] Error 2
+
+
+Source file was:
+#include <windows.h>
+                                 #include <winhttp.h>
+                                 int main(){return 0;}
+Determining if the include file d2d1.h exists failed with the following output:
+Change Dir: D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):D:/MinGW/bin/make.exe cmTC_a20bf/fast && D:/MinGW/bin/make.exe -f CMakeFiles\cmTC_a20bf.dir\build.make CMakeFiles/cmTC_a20bf.dir/build
+make.exe[1]: Entering directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_a20bf.dir/CheckIncludeFile.c.obj
+D:\MinGW\bin\gcc.exe    -o CMakeFiles\cmTC_a20bf.dir\CheckIncludeFile.c.obj   -c D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\CheckIncludeFile.c
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\CheckIncludeFile.c:1:18: fatal error: d2d1.h: No such file or directory
+ #include <d2d1.h>
+                  ^
+compilation terminated.
+make.exe[1]: *** [CMakeFiles/cmTC_a20bf.dir/CheckIncludeFile.c.obj] Error 1
+make.exe[1]: Leaving directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+make.exe: *** [cmTC_a20bf/fast] Error 2
+
+
+
+Performing C++ SOURCE FILE Test HAVE_HASH_MAP failed with the following output:
+Change Dir: D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):D:/MinGW/bin/make.exe cmTC_4e97b/fast && D:/MinGW/bin/make.exe -f CMakeFiles\cmTC_4e97b.dir\build.make CMakeFiles/cmTC_4e97b.dir/build
+make.exe[1]: Entering directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_4e97b.dir/src.cxx.obj
+D:\MinGW\bin\c++.exe  -D__WIN32__ -D__WINDOWS__  -DHAVE_HASH_MAP   -o CMakeFiles\cmTC_4e97b.dir\src.cxx.obj -c D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx
+In file included from d:\mingw\lib\gcc\mingw32\6.3.0\include\c++\backward\hash_map:60:0,
+                 from D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:1:
+d:\mingw\lib\gcc\mingw32\6.3.0\include\c++\backward\backward_warning.h:32:2: warning: #warning This file includes at least one deprecated or antiquated header which may be removed without further notice at a future date. Please use a non-deprecated interface with equivalent functionality instead. For a listing of replacement headers and interfaces, consult the file backward_warning.h. To disable this warning use -Wno-deprecated. [-Wcpp]
+ #warning \
+  ^~~~~~~
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx: In function 'int main(int, char**)':
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:7:5: error: 'hash_map' is not a member of 'std'
+     std::hash_map<double*, char*, std::hash<double*>, std::equal_to<double*> > test1;
+     ^~~
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:7:5: note: suggested alternative:
+In file included from D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:1:0:
+d:\mingw\lib\gcc\mingw32\6.3.0\include\c++\backward\hash_map:83:11: note:   '__gnu_cxx::hash_map'
+     class hash_map
+           ^~~~~~~~
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:7:19: error: expected primary-expression before 'double'
+     std::hash_map<double*, char*, std::hash<double*>, std::equal_to<double*> > test1;
+                   ^~~~~~
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:8:5: error: 'hash_set' is not a member of 'std'
+     std::hash_set<char*, std::hash<char*>, std::equal_to<char*> > test2;
+     ^~~
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:8:5: note: suggested alternative:
+In file included from D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:2:0:
+d:\mingw\lib\gcc\mingw32\6.3.0\include\c++\backward\hash_set:84:11: note:   '__gnu_cxx::hash_set'
+     class hash_set
+           ^~~~~~~~
+D:\Code\Ray\public\wxWidgets\cmake-build-debug\CMakeFiles\CMakeTmp\src.cxx:8:19: error: expected primary-expression before 'char'
+     std::hash_set<char*, std::hash<char*>, std::equal_to<char*> > test2;
+                   ^~~~
+make.exe[1]: *** [CMakeFiles/cmTC_4e97b.dir/src.cxx.obj] Error 1
+make.exe[1]: Leaving directory `D:/Code/Ray/public/wxWidgets/cmake-build-debug/CMakeFiles/CMakeTmp'
+make.exe: *** [cmTC_4e97b/fast] Error 2
+
+
+Source file was:
+#include <hash_map>
+#include <hash_set>
+
+
+int main(int argc, char* argv[]) {
+ 
+    std::hash_map<double*, char*, std::hash<double*>, std::equal_to<double*> > test1;
+    std::hash_set<char*, std::hash<char*>, std::equal_to<char*> > test2;
+return 0; }
