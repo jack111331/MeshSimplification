@@ -10,7 +10,7 @@ wxIMPLEMENT_APP(MyApp);
 
 bool MyApp::OnInit()
 {
-    MyFrame *frame = new MyFrame( "Hello World", wxPoint(50, 50), wxSize(800, 600) );
+    MyFrame *frame = new MyFrame( "Mesh simplification and skeleton extraction", wxPoint(50, 50), wxSize(800, 600) );
     frame->Show( true );
     Connect(wxID_ANY, wxEVT_IDLE, wxIdleEventHandler(MyApp::OnIdle));
     return true;

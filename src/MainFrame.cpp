@@ -9,6 +9,9 @@
 #include "MainFrame.h"
 #include "Application.h"
 
+#define USE_FILE_LOG
+//#define USE_WINDOW_LOG
+
 wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
                 EVT_MENU(ID_Hello, MyFrame::OnHello)
                 EVT_MENU(MENU_Exit, MyFrame::OnExit)
@@ -92,7 +95,16 @@ MyFrame::MyFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
     m_log = new wxTextCtrl(m_leftPanel, wxID_ANY, wxString(), wxPoint(5, 350),
                            wxSize(400, 200), wxTE_MULTILINE);
     m_log->SetMinSize(wxSize(-1, 100));
+#ifdef USE_WINDOW_LOG
     m_logOld = wxLog::SetActiveTarget(new wxLogTextCtrl(m_log));
+#endif
+
+#ifdef USE_FILE_LOG
+    m_logFile.open("log.txt", std::ios_base::out);
+    m_logFileStream = new wxLogStream(&m_logFile);
+    wxLog::SetActiveTarget(m_logFileStream);
+#endif
+
     wxLogMessage("This is the log window");
 
 
@@ -112,12 +124,30 @@ MyFrame::MyFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
 }
 
 MyFrame::~MyFrame() {
+#ifdef USE_WINDOW_LOG
     delete wxLog::SetActiveTarget(m_logOld);
+#endif
+#ifdef USE_FILE_LOG
+    delete wxLog::SetActiveTarget(m_logFileStream);
+    m_logFile.close();
+#endif
 }
 
 
-SimplificationThread *MyFrame::CreateThread() {
+SimplificationThread *MyFrame::CreateSimplificationThread() {
     SimplificationThread *thread = new SimplificationThread(m_meshManager, m_3DView, m_slider);
+
+    if (thread->Create() != wxTHREAD_NO_ERROR) {
+        wxLogError("Can't create thread!");
+    }
+
+    wxGetApp().m_threads.Add(thread);
+
+    return thread;
+}
+
+SkeletonToLineThread *MyFrame::CreateSkeletonToLineThread() {
+    SkeletonToLineThread *thread = new SkeletonToLineThread(m_skeletonExtraction, m_3DView, m_skeletonToLine);
 
     if (thread->Create() != wxTHREAD_NO_ERROR) {
         wxLogError("Can't create thread!");
@@ -146,8 +176,10 @@ void MyFrame::OnSkeleton(wxCommandEvent &event) {
 //    m_laplaceTimes->GetValue();
 //    times = wxAtoi(m_laplaceTimes->GetValue());
 //    wxLogMessage("times=%d", times);
-// 13
-    for (int i = 0;i < 13;++i) {
+// 14 for 4.5 0~13 14 1.1
+// 12 for 5
+// 11 for 6
+    for (int i = 0;i < 9;++i) {
         m_skeletonExtraction->calculateSkeleton();
     }
     m_mesh = m_skeletonExtraction->getCurrentMesh();
@@ -159,6 +191,18 @@ void MyFrame::OnSkeleton(wxCommandEvent &event) {
 }
 
 void MyFrame::OnSkeletonToLine(wxCommandEvent &event) {
+
+//    const wxArrayThread& threads = wxGetApp().m_threads;
+//    size_t count = threads.GetCount();
+//    if (!count) {
+//        m_skeletonToLine->Enable(false);
+//
+//        SkeletonToLineThread *thread = CreateSkeletonToLineThread();
+//
+//        if (thread->Run() != wxTHREAD_NO_ERROR) {
+//            wxLogError("Can't start thread!");
+//        }
+//    }
 
     m_skeletonExtraction->simplifyMesh();
     m_mesh = m_skeletonExtraction->getCurrentMesh();
@@ -176,7 +220,7 @@ void MyFrame::OnSimplification(wxScrollEvent &event) {
 //        const wxArrayThread& threads = wxGetApp().m_threads;
 //        size_t count = threads.GetCount();
 //        if (!count) {
-//            SimplificationThread *thread = CreateThread();
+//            SimplificationThread *thread = CreateSimplificationThread();
 //
 //            if (thread->Run() != wxTHREAD_NO_ERROR) {
 //                wxLogError("Can't start thread!");
@@ -295,6 +339,41 @@ wxThread::ExitCode SimplificationThread::Entry() {
 
         mesh->updateVAO();
         m_3DView->updated();
+
+        wxLogMessage("Thread finished.");
+
+    }
+
+    return NULL;
+}
+
+SkeletonToLineThread::SkeletonToLineThread(SkeletonExtraction *skeletonExtractor, GLPanel *view, wxButton *button)
+        : wxThread() {
+    m_skeletonExtractor = skeletonExtractor;
+    m_3DView = view;
+    m_button = button;
+}
+
+SkeletonToLineThread::~SkeletonToLineThread() {
+
+    wxArrayThread &threads = wxGetApp().m_threads;
+    threads.Remove(this);
+}
+
+wxThread::ExitCode SkeletonToLineThread::Entry() {
+    {
+        wxCriticalSectionLocker locker(wxGetApp().m_critsect);
+        wxLogMessage("Thread started (priority = %u).", GetPriority());
+
+        m_skeletonExtractor->simplifyMesh();
+
+        Tri_Mesh *mesh = m_skeletonExtractor->getCurrentMesh();
+        Context *context = Context::getInstance();
+        context->getPipeline()->m_objectList[0]->m_mesh = mesh;
+
+        mesh->updateVAO();
+        m_3DView->updated();
+        m_button->Enable(true);
 
         wxLogMessage("Thread finished.");
 

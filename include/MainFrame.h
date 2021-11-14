@@ -28,6 +28,21 @@ public:
 
 };
 
+class SkeletonToLineThread : public wxThread
+{
+public:
+    SkeletonToLineThread(SkeletonExtraction *skeletonExtractor, GLPanel *view, wxButton *button);
+    virtual ~SkeletonToLineThread();
+
+    // thread execution starts here
+    virtual void *Entry() wxOVERRIDE;
+
+public:
+    SkeletonExtraction *m_skeletonExtractor;
+    GLPanel *m_3DView;
+    wxButton *m_button;
+
+};
 
 
 class MyFrame : public wxFrame {
@@ -54,8 +69,13 @@ public:
     MeshManager *m_meshManager = nullptr;
     SkeletonExtraction *m_skeletonExtraction = nullptr;
 
+    std::fstream m_logFile;
+    wxLogStream *m_logFileStream;
+
 private:
-    SimplificationThread *CreateThread();
+    SimplificationThread *CreateSimplificationThread();
+
+    SkeletonToLineThread *CreateSkeletonToLineThread();
 
     void OnHello(wxCommandEvent &event);
 

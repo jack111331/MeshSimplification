@@ -10,7 +10,7 @@
 class SKErrorMetric {
 public:
     // TODO change to HEHandle
-    OMT::HEHandle m_halfedgeHandle;
+    OMT::EHandle m_edgeHandle;
     double m_metric;
     bool operator < (const SKErrorMetric &rhs) const {
         return m_metric < rhs.m_metric;
@@ -24,7 +24,7 @@ public:
 		m_originalMesh = new Tri_Mesh(*mesh);
 
 		size_t edgeCount = mesh->n_edges();
-        m_pQueue = new SKErrorMetric[2*edgeCount + 1];
+        m_pQueue = new SKErrorMetric[edgeCount + 1];
 	}
 	~SkeletonExtraction() {
 	    delete [] m_pQueue;
@@ -49,7 +49,7 @@ public:
     void propagateToTop(Tri_Mesh *mesh, int heapIdx);
     void propagateToBottom(Tri_Mesh *mesh, int heapIdx);
 
-    void insertEdge(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle);
+    void insertEdge(Tri_Mesh *mesh, OMT::EHandle edgeHandle);
     SKErrorMetric getTopEdge(Tri_Mesh *mesh);
     void deleteEdge(Tri_Mesh *mesh, int heapIdx);
     void changeEdge(Tri_Mesh *mesh, int heapIdx);
@@ -60,7 +60,7 @@ public:
     void initEdgeMetric(Tri_Mesh *mesh);
     void easierCollapseEdge(Tri_Mesh *mesh);
 
-    SKErrorMetric computeErrorMetric(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle);
+    SKErrorMetric computeErrorMetric(Tri_Mesh *mesh, OMT::EHandle edgeHandle);
 
     //
 	void simplifyMesh();
@@ -70,7 +70,7 @@ public:
 	// Least square mesh contraction
 	double m_wL;
 	//4.5 213 is the plausible minimum
-	double w_l_factor = 4.5;
+	double w_l_factor = 12.0;
 
 	double m_initWH = 1.0;
 
@@ -84,10 +84,12 @@ public:
     int m_currentTailIdx = 0;
 
     OpenMesh::VPropHandleT<Eigen::Matrix4d> m_K;
-    OpenMesh::HPropHandleT<int> m_heapIdxProp;
+    OpenMesh::EPropHandleT<int> m_heapIdxProp;
 
     double m_wa = 1.0, m_wb = 0.1;
     bool m_isInitializedQ = false;
+
+    int m_lastDiscardSize = -1;
 
 private:
 	double calculateInitialAverageFaceArea();
