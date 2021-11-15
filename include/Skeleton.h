@@ -78,7 +78,9 @@ public:
                           std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap,
                           std::vector<SKErrorMetric>::iterator collapseEdgeIter);
 
-    void computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em);
+    void computeVertexMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap, OMT::VHandle vHandle);
+
+    void computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap);
 
     //
     void simplifyMesh();
@@ -100,9 +102,13 @@ public:
     std::vector<SKErrorMetric *> m_pQueue;
     std::map<SKErrorMetric *, int> m_pQueueHeapIdx;
 
+    std::map<OMT::VHandle, std::vector<SKErrorMetric>> m_outHalfedgeMap;
+    std::map<OMT::VHandle, std::vector<SkeletonFace>> m_outFaceMap;
+
     int m_currentTailIdx = 0;
 
     OpenMesh::VPropHandleT<Eigen::Matrix4d> m_K;
+    OpenMesh::VPropHandleT<double> m_KTotal;
 //    OpenMesh::EPropHandleT<int> m_heapIdxProp;
 
     double m_wa = 1.0, m_wb = 0.1;

@@ -9,8 +9,8 @@
 #include "MainFrame.h"
 #include "Application.h"
 
-#define USE_FILE_LOG
-//#define USE_WINDOW_LOG
+//#define USE_FILE_LOG
+#define USE_WINDOW_LOG
 
 wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
                 EVT_MENU(ID_Hello, MyFrame::OnHello)
@@ -179,6 +179,8 @@ void MyFrame::OnSkeleton(wxCommandEvent &event) {
 // 14 for 4.5 0~13 14 1.1
 // 12 for 5
 // 11 for 6
+
+// 9
     for (int i = 0;i < 9;++i) {
         m_skeletonExtraction->calculateSkeleton();
     }
@@ -209,7 +211,7 @@ void MyFrame::OnSkeletonToLine(wxCommandEvent &event) {
     Context *context = Context::getInstance();
     context->getPipeline()->m_objectList[0]->m_mesh = m_mesh;
 
-    m_mesh->updateVAO();
+//    m_mesh->updateVAO();
     m_3DView->updated();
 }
 
@@ -237,7 +239,6 @@ void MyFrame::OnSimplification(wxScrollEvent &event) {
         Context *context = Context::getInstance();
         context->getPipeline()->m_objectList[0]->m_mesh = m_mesh;
 
-        m_mesh->updateVAO();
         m_3DView->updated();
     }
 }
@@ -371,7 +372,6 @@ wxThread::ExitCode SkeletonToLineThread::Entry() {
         Context *context = Context::getInstance();
         context->getPipeline()->m_objectList[0]->m_mesh = mesh;
 
-        mesh->updateVAO();
         m_3DView->updated();
         m_button->Enable(true);
 
