@@ -83,6 +83,7 @@ namespace OMT//OpenMesh Triangle mesh
     typedef MyMesh::FaceHalfedgeIter						FHIter;	//FaceHalfedgeIter type
     typedef MyMesh::FaceFaceIter							FFIter	;	//FaceFaceIter type
     typedef MyMesh::VertexOHalfedgeIter						VOHEIter;	//VertexOutHalfEdge type
+    typedef MyMesh::VertexIHalfedgeIter						VIHEIter;	//VertexInHalfEdge type
     typedef MyMesh::ConstVertexVertexIter					CVVIter	;	//ConstVertexVertexIter type
     /*----------------------------------------------------------------------*/
 

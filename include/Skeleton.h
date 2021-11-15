@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Eigen/SparseCore>
 #include <Eigen/SparseCholesky>
 
@@ -9,102 +10,120 @@
 
 class SKErrorMetric {
 public:
-    // TODO change to HEHandle
-    OMT::EHandle m_edgeHandle;
+    SKErrorMetric(OMT::VHandle fromVertexHandle, OMT::VHandle toVertexHandle, double metric) : m_from(fromVertexHandle),
+                                                                                               m_to(toVertexHandle),
+                                                                                               m_metric(metric) {
+
+    }
+
+    OMT::VHandle m_from;
+    OMT::VHandle m_to;
     double m_metric;
-    bool operator < (const SKErrorMetric &rhs) const {
+
+    bool operator<(const SKErrorMetric &rhs) const {
         return m_metric < rhs.m_metric;
     }
+
 private:
+};
+
+class SkeletonFace {
+public:
+    OMT::VHandle m_from;
+    OMT::VHandle m_to[2];
 };
 
 class SkeletonExtraction {
 public:
-	SkeletonExtraction(Tri_Mesh* mesh) {
-		m_originalMesh = new Tri_Mesh(*mesh);
+    SkeletonExtraction(Tri_Mesh *mesh) {
+        m_originalMesh = new Tri_Mesh(*mesh);
 
-		size_t edgeCount = mesh->n_edges();
-        m_pQueue = new SKErrorMetric[edgeCount + 1];
-	}
-	~SkeletonExtraction() {
-	    delete [] m_pQueue;
-	}
+        size_t edgeCount = mesh->n_edges();
+//        m_pQueue = new SKErrorMetric[edgeCount + 1];
+    }
 
-	void calculateSkeleton();
+    ~SkeletonExtraction() {
+//        delete[] m_pQueue;
+    }
 
-	Tri_Mesh* getCurrentMesh() {
-		if (m_operateMesh == nullptr) {
-			return m_originalMesh;
-		}
-		return m_operateMesh;
-	}
+    void calculateSkeleton();
 
-	// DegenerateMeshToLine
-	void degenerateToLine();
+    Tri_Mesh *getCurrentMesh() {
+        if (m_operateMesh == nullptr) {
+            return m_originalMesh;
+        }
+        return m_operateMesh;
+    }
 
-	bool isCollapsable(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle);
+    // DegenerateMeshToLine
 
-    void initErrorMetric(Tri_Mesh *mesh);
+//    bool isCollapsable(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle);
+
+    void initErrorMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                         std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap);
 
     void propagateToTop(Tri_Mesh *mesh, int heapIdx);
     void propagateToBottom(Tri_Mesh *mesh, int heapIdx);
 
-    void insertEdge(Tri_Mesh *mesh, OMT::EHandle edgeHandle);
-    SKErrorMetric getTopEdge(Tri_Mesh *mesh);
-    void deleteEdge(Tri_Mesh *mesh, int heapIdx);
-    void changeEdge(Tri_Mesh *mesh, int heapIdx);
-    void updateVertexK(Tri_Mesh *mesh, OMT::VHandle vertexHandle);
+    void insertEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric);
+    SKErrorMetric *getTopEdge(Tri_Mesh *mesh);
+    void deleteEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric);
+    void changeEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric);
 
-    bool collapseEdge(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle);
+    bool collapseEdge(Tri_Mesh *mesh,
+                      std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                      std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap);
 
-    void initEdgeMetric(Tri_Mesh *mesh);
-    void easierCollapseEdge(Tri_Mesh *mesh);
+    void halfedgeCollapse(std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                          std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap,
+                          std::vector<SKErrorMetric>::iterator collapseEdgeIter);
 
-    SKErrorMetric computeErrorMetric(Tri_Mesh *mesh, OMT::EHandle edgeHandle);
+    void computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em);
 
     //
-	void simplifyMesh();
+    void simplifyMesh();
 
-	Tri_Mesh* m_operateMesh = nullptr;
+    Tri_Mesh *m_operateMesh = nullptr;
 
-	// Least square mesh contraction
-	double m_wL;
-	//4.5 213 is the plausible minimum
-	double w_l_factor = 12.0;
+    // Least square mesh contraction
+    double m_wL;
+    //4.5 213 is the plausible minimum
+    double w_l_factor = 12.0;
 
-	double m_initWH = 1.0;
+    double m_initWH = 1.0;
 
-	int m_k = 0;
+    int m_k = 0;
     std::vector<double> m_eachVertexWH;
     double m_initialAverageFaceArea;
 
     // Degenerate to line
-    SKErrorMetric *m_pQueue;
+    std::vector<SKErrorMetric *> m_pQueue;
+    std::map<SKErrorMetric *, int> m_pQueueHeapIdx;
 
     int m_currentTailIdx = 0;
 
     OpenMesh::VPropHandleT<Eigen::Matrix4d> m_K;
-    OpenMesh::EPropHandleT<int> m_heapIdxProp;
+//    OpenMesh::EPropHandleT<int> m_heapIdxProp;
 
     double m_wa = 1.0, m_wb = 0.1;
     bool m_isInitializedQ = false;
 
-    int m_lastDiscardSize = -1;
+    void updateSkeletonEBO(std::vector<uint32_t> &edgeSkeletonIndices);
 
 private:
-	double calculateInitialAverageFaceArea();
-	double calculateCurrentFaceArea();
-	double calculateAngle(const OMT::Point &a, const OMT::Point &b);
+    double calculateInitialAverageFaceArea();
 
-	double calcCot(const OMT::Point& a, const OMT::Point& b);
+    double calculateCurrentFaceArea();
 
-	Tri_Mesh* m_originalMesh = nullptr;
+    double calculateAngle(const OMT::Point &a, const OMT::Point &b);
 
-	std::vector<double> m_initialOneRingArea;
+    double calcCot(const OMT::Point &a, const OMT::Point &b);
 
-	std::vector<SKErrorMetric> m_discardedErrorMetric;
+    Tri_Mesh *m_originalMesh = nullptr;
 
-	std::vector<double> m_cost;
-    std::vector<bool> m_isDiscard;
+    std::vector<double> m_initialOneRingArea;
 
+//	std::vector<SKErrorMetric> m_discardedErrorMetric;
+
+    int m_totalFace = 0;
 };

@@ -1,10 +1,11 @@
 #include "Skeleton.h"
 #include <cmath>
+#include <glad/glad.h>
 #include "Eigen/Dense"
 
 void SkeletonExtraction::calculateSkeleton() {
     size_t vertexCount;
-    if(m_k == 0){
+    if (m_k == 0) {
         m_originalMesh->garbage_collection();
         vertexCount = m_originalMesh->n_vertices();
 
@@ -25,8 +26,8 @@ void SkeletonExtraction::calculateSkeleton() {
     std::cout << m_k << "th iteration" << std::endl;
     std::cerr << m_wL << std::endl;
 
-    Eigen::SparseMatrix<double> A(2*vertexCount, vertexCount);
-    Eigen::SparseMatrix<double> B(2*vertexCount, 3);
+    Eigen::SparseMatrix<double> A(2 * vertexCount, vertexCount);
+    Eigen::SparseMatrix<double> B(2 * vertexCount, 3);
 
     std::vector<Eigen::Triplet<double>> coef;
 
@@ -47,7 +48,8 @@ void SkeletonExtraction::calculateSkeleton() {
                 ++fh_it;
             }
             ++fh_it;
-            OMT::Normal edgeVector_1 = m_operateMesh->calc_edge_vector(m_operateMesh->opposite_halfedge_handle(fh_it.handle()));
+            OMT::Normal edgeVector_1 = m_operateMesh->calc_edge_vector(
+                    m_operateMesh->opposite_halfedge_handle(fh_it.handle()));
             ++fh_it;
             OMT::Normal edgeVector_2 = m_operateMesh->calc_edge_vector(fh_it.handle());
             double cot_1 = calcCot(edgeVector_1.normalized(), edgeVector_2.normalized());
@@ -68,15 +70,17 @@ void SkeletonExtraction::calculateSkeleton() {
 
         if (m_k == 0) {
             m_eachVertexWH[i] = m_initWH;
-        }
-        else {
+        } else {
             double currentOneRingArea = 0.0;
-            for (OMT::VFIter vf_it = m_operateMesh->vf_begin(currentVertex); vf_it != m_operateMesh->vf_end(currentVertex); ++vf_it) {
+            for (OMT::VFIter vf_it = m_operateMesh->vf_begin(currentVertex);
+                 vf_it != m_operateMesh->vf_end(currentVertex); ++vf_it) {
                 OMT::FHandle faceHandle = vf_it.handle();
                 OMT::FVIter fv_it = m_operateMesh->fv_begin(faceHandle);
-                const OMT::Point& P = m_operateMesh->point(fv_it); ++fv_it;
-                const OMT::Point& Q = m_operateMesh->point(fv_it); ++fv_it;
-                const OMT::Point& R = m_operateMesh->point(fv_it);
+                const OMT::Point &P = m_operateMesh->point(fv_it);
+                ++fv_it;
+                const OMT::Point &Q = m_operateMesh->point(fv_it);
+                ++fv_it;
+                const OMT::Point &R = m_operateMesh->point(fv_it);
                 double area = ((Q - P) % (R - P)).norm() * 0.5;
                 currentOneRingArea += area;
             }
@@ -92,12 +96,12 @@ void SkeletonExtraction::calculateSkeleton() {
             if (isinf(weight)) {
                 std::cerr << weight << std::endl;
                 weight = 8165619676597685;
-            }
-            else if (isnan(weight)) {
+            } else if (isnan(weight)) {
                 std::cerr << weight << std::endl;
                 weight = 0.0;
             }
-            OMT::VHandle v = m_operateMesh->to_vertex_handle(m_operateMesh->halfedge_handle(std::get<0>(cotPropList[j])));
+            OMT::VHandle v = m_operateMesh->to_vertex_handle(
+                    m_operateMesh->halfedge_handle(std::get<0>(cotPropList[j])));
             if (isnan(m_wL * weight) || isinf(m_wL * weight)) {
                 std::cerr << "Aw inf or nan" << " " << m_wL << " " << weight << std::endl;
             }
@@ -120,14 +124,14 @@ void SkeletonExtraction::calculateSkeleton() {
     coef.clear();
     for (int i = 0; i < vertexCount; ++i) {
         OMT::VHandle v = m_operateMesh->vertex_handle(i);
-        OMT::Scalar* pointCoord = m_operateMesh->point(v).data();
+        OMT::Scalar *pointCoord = m_operateMesh->point(v).data();
         coef.push_back(Eigen::Triplet<double>(vertexCount + i, 0, m_eachVertexWH[i] * pointCoord[0]));
         coef.push_back(Eigen::Triplet<double>(vertexCount + i, 1, m_eachVertexWH[i] * pointCoord[1]));
         coef.push_back(Eigen::Triplet<double>(vertexCount + i, 2, m_eachVertexWH[i] * pointCoord[2]));
     }
     B.setFromTriplets(coef.begin(), coef.end());
     // Factorize to upper-triangle LL^T = U^T U form
-    Eigen::SimplicialCholesky < Eigen::SparseMatrix<double>> solver(A.transpose() * A);
+    Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver(A.transpose() * A);
     Eigen::SparseMatrix<double> X = solver.solve(A.transpose() * B);
 
 
@@ -140,7 +144,7 @@ void SkeletonExtraction::calculateSkeleton() {
     // new X [[v_1.x, v_2.y, v_3.z], ...]
     for (OMT::VIter v_it = m_operateMesh->vertices_begin(); v_it != m_operateMesh->vertices_end(); ++v_it) {
         int idx = v_it.handle().idx();
-        OMT::Vec3d pointCoord = { X.coeff(idx, 0), X.coeff(idx, 1), X.coeff(idx, 2) };
+        OMT::Vec3d pointCoord = {X.coeff(idx, 0), X.coeff(idx, 1), X.coeff(idx, 2)};
         m_operateMesh->set_point(v_it.handle(), pointCoord);
         /*
         if (k == TIMES - 1) {
@@ -158,493 +162,372 @@ void SkeletonExtraction::calculateSkeleton() {
         m_refreshCallback();
     }
     */
-	m_k++;
+    m_k++;
 }
 
 double SkeletonExtraction::calculateInitialAverageFaceArea() {
-	double averageArea = 0.0;
-	for (int i = 0; i < m_originalMesh->n_faces(); ++i) {
-		OMT::FHandle faceHandle = m_originalMesh->face_handle(i);
-		OMT::FVIter fv_it = m_originalMesh->fv_begin(faceHandle);
-		const OMT::Point& P = m_originalMesh->point(fv_it); ++fv_it;
-		const OMT::Point& Q = m_originalMesh->point(fv_it); ++fv_it;
-		const OMT::Point& R = m_originalMesh->point(fv_it);
-		double area = ((Q - P) % (R - P)).norm() * 0.5;
-		fv_it = m_originalMesh->fv_begin(faceHandle);
-		m_initialOneRingArea[fv_it.handle().idx()] += area; ++fv_it;
-		m_initialOneRingArea[fv_it.handle().idx()] += area; ++fv_it;
-		m_initialOneRingArea[fv_it.handle().idx()] += area;
-		averageArea += area;
-	}
-	return averageArea / m_originalMesh->n_faces();
+    double averageArea = 0.0;
+    for (int i = 0; i < m_originalMesh->n_faces(); ++i) {
+        OMT::FHandle faceHandle = m_originalMesh->face_handle(i);
+        OMT::FVIter fv_it = m_originalMesh->fv_begin(faceHandle);
+        const OMT::Point &P = m_originalMesh->point(fv_it);
+        ++fv_it;
+        const OMT::Point &Q = m_originalMesh->point(fv_it);
+        ++fv_it;
+        const OMT::Point &R = m_originalMesh->point(fv_it);
+        double area = ((Q - P) % (R - P)).norm() * 0.5;
+        fv_it = m_originalMesh->fv_begin(faceHandle);
+        m_initialOneRingArea[fv_it.handle().idx()] += area;
+        ++fv_it;
+        m_initialOneRingArea[fv_it.handle().idx()] += area;
+        ++fv_it;
+        m_initialOneRingArea[fv_it.handle().idx()] += area;
+        averageArea += area;
+    }
+    return averageArea / m_originalMesh->n_faces();
 }
 
 double SkeletonExtraction::calculateCurrentFaceArea() {
-	double averageArea = 0.0;
-	for (int i = 0; i < m_operateMesh->n_faces(); ++i) {
-		OMT::FHandle faceHandle = m_operateMesh->face_handle(i);
-		OMT::FVIter fv_it = m_operateMesh->fv_begin(faceHandle);
-		const OMT::Point& P = m_operateMesh->point(fv_it); ++fv_it;
-		const OMT::Point& Q = m_operateMesh->point(fv_it); ++fv_it;
-		const OMT::Point& R = m_operateMesh->point(fv_it);
-		double area = ((Q - P) % (R - P)).norm() * 0.5;
-		averageArea += area;
-	}
-	return averageArea;
+    double averageArea = 0.0;
+    for (int i = 0; i < m_operateMesh->n_faces(); ++i) {
+        OMT::FHandle faceHandle = m_operateMesh->face_handle(i);
+        OMT::FVIter fv_it = m_operateMesh->fv_begin(faceHandle);
+        const OMT::Point &P = m_operateMesh->point(fv_it);
+        ++fv_it;
+        const OMT::Point &Q = m_operateMesh->point(fv_it);
+        ++fv_it;
+        const OMT::Point &R = m_operateMesh->point(fv_it);
+        double area = ((Q - P) % (R - P)).norm() * 0.5;
+        averageArea += area;
+    }
+    return averageArea;
 }
 
-double SkeletonExtraction::calculateAngle(const OMT::Point& a, const OMT::Point& b) {
-	return acos(a.normalized() | b.normalized());
+double SkeletonExtraction::calculateAngle(const OMT::Point &a, const OMT::Point &b) {
+    return acos(a.normalized() | b.normalized());
 }
 
-double SkeletonExtraction::calcCot(const OMT::Point& a, const OMT::Point& b) {
-	if (a == b) {
-		return std::numeric_limits<double>::infinity();
-	}
-	return((a | b) / (a % b).norm());
+double SkeletonExtraction::calcCot(const OMT::Point &a, const OMT::Point &b) {
+    if (a == b) {
+        return std::numeric_limits<double>::infinity();
+    }
+    return ((a | b) / (a % b).norm());
 }
 
-void SkeletonExtraction::degenerateToLine() {
-
-}
-
-bool SkeletonExtraction::isCollapsable(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle) {
-    return !mesh->status(mesh->face_handle(halfedgeHandle)).deleted() && !mesh->status(mesh->face_handle(mesh->opposite_halfedge_handle(halfedgeHandle))).deleted();
-}
+//bool SkeletonExtraction::isCollapsable(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle) {
+//    int fromAdjacentV = 0;
+//    int fromAdjacentF = 0;
+//    OMT::VHandle fromVertexHandle = mesh->from_vertex_handle(halfedgeHandle);
+//    for (auto vv_it = mesh->vv_begin(fromVertexHandle); vv_it != mesh->vv_end(fromVertexHandle); ++vv_it) {
+//        fromAdjacentV++;
+//    }
+//    for (auto vf_it = mesh->vf_begin(fromVertexHandle); vf_it != mesh->vf_end(fromVertexHandle); ++vf_it) {
+//        fromAdjacentF++;
+//    }
+//    int toAdjacentV = 0;
+//    int toAdjacentF = 0;
+//    OMT::VHandle toVertexHandle = mesh->to_vertex_handle(halfedgeHandle);
+//    for (auto vv_it = mesh->vv_begin(toVertexHandle); vv_it != mesh->vv_end(toVertexHandle); ++vv_it) {
+//        toAdjacentV++;
+//    }
+//    for (auto vf_it = mesh->vf_begin(toVertexHandle); vf_it != mesh->vf_end(toVertexHandle); ++vf_it) {
+//        toAdjacentF++;
+//    }
+//    return fromAdjacentV > 1 && fromAdjacentF > 0 && toAdjacentV > 1 && toAdjacentF > 0;
+//}
 
 void SkeletonExtraction::propagateToTop(Tri_Mesh *mesh, int heapIdx) {
-    SKErrorMetric em = computeErrorMetric(mesh, m_pQueue[heapIdx].m_edgeHandle);
     while (heapIdx > 1) {
-        if (m_pQueue[heapIdx] < m_pQueue[heapIdx / 2]) {
-            SKErrorMetric temp = m_pQueue[heapIdx];
+        if (*m_pQueue[heapIdx] < *m_pQueue[heapIdx / 2]) {
+            SKErrorMetric *temp = m_pQueue[heapIdx];
+            int tempIdx = m_pQueueHeapIdx[temp];
+
+            m_pQueueHeapIdx[m_pQueue[heapIdx]] = m_pQueueHeapIdx[m_pQueue[heapIdx / 2]];
             m_pQueue[heapIdx] = m_pQueue[heapIdx / 2];
-            mesh->property(m_heapIdxProp, m_pQueue[heapIdx].m_edgeHandle) = heapIdx;
+
+            m_pQueueHeapIdx[m_pQueue[heapIdx / 2]] = tempIdx;
             m_pQueue[heapIdx / 2] = temp;
+
             heapIdx /= 2;
-        }
-        else {
+        } else {
             break;
         }
     }
-    mesh->property(m_heapIdxProp, em.m_edgeHandle) = heapIdx;
 }
+
 void SkeletonExtraction::propagateToBottom(Tri_Mesh *mesh, int heapIdx) {
-    SKErrorMetric em = computeErrorMetric(mesh, m_pQueue[heapIdx].m_edgeHandle);
-    while (heapIdx <= m_currentTailIdx) {
+    // FIXME need to locate heapIdx
+    while (heapIdx < m_pQueue.size()) {
         int minIdx = -1;
-        if (heapIdx * 2 + 1 <= m_currentTailIdx) {
-            if (m_pQueue[heapIdx * 2 + 1] < m_pQueue[heapIdx * 2]) {
+        if (heapIdx * 2 + 1 <= m_pQueue.size()) {
+            if (*m_pQueue[heapIdx * 2 + 1] < *m_pQueue[heapIdx * 2]) {
                 minIdx = heapIdx * 2 + 1;
-            }
-            else {
+            } else {
                 minIdx = heapIdx * 2;
             }
-        }
-        else if (heapIdx * 2 <= m_currentTailIdx) {
+        } else if (heapIdx * 2 < m_pQueue.size()) {
             minIdx = heapIdx * 2;
         }
         if (minIdx != -1) {
-            if (m_pQueue[minIdx] < m_pQueue[heapIdx]) {
-                mesh->property(m_heapIdxProp, m_pQueue[minIdx].m_edgeHandle) = heapIdx;
-                SKErrorMetric temp = m_pQueue[heapIdx];
+            if (*m_pQueue[minIdx] < *m_pQueue[heapIdx]) {
+                SKErrorMetric *temp = m_pQueue[heapIdx];
+                int tempIdx = m_pQueueHeapIdx[temp];
+
+                m_pQueueHeapIdx[m_pQueue[heapIdx]] = m_pQueueHeapIdx[m_pQueue[minIdx]];
                 m_pQueue[heapIdx] = m_pQueue[minIdx];
+
+                m_pQueueHeapIdx[m_pQueue[minIdx]] = tempIdx;
                 m_pQueue[minIdx] = temp;
+
                 heapIdx = minIdx;
-            }
-            else {
+            } else {
                 break;
             }
-        }
-        else {
+        } else {
             break;
         }
     }
-    mesh->property(m_heapIdxProp, em.m_edgeHandle) = heapIdx;
 }
 
-void SkeletonExtraction::insertEdge(Tri_Mesh *mesh, OMT::EHandle edgeHandle) {
-    SKErrorMetric em = computeErrorMetric(mesh, edgeHandle);
-    m_pQueue[++m_currentTailIdx] = em;
-    mesh->property(m_heapIdxProp, edgeHandle) = m_currentTailIdx;
-
-    propagateToTop(mesh, m_currentTailIdx);
+void SkeletonExtraction::insertEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric) {
+    m_pQueue.push_back(skErrorMetric);
+    m_pQueueHeapIdx[skErrorMetric] = m_pQueue.size()-1;
+    propagateToTop(mesh, m_pQueue.size()-1);
 }
 
-SKErrorMetric SkeletonExtraction::getTopEdge(Tri_Mesh *mesh) {
-    SKErrorMetric ret = m_pQueue[1];
-
-    return ret;
+SKErrorMetric *SkeletonExtraction::getTopEdge(Tri_Mesh *mesh) {
+    return m_pQueue[1];
 }
 
-void SkeletonExtraction::deleteEdge(Tri_Mesh *mesh, int heapIdx) {
-    if (heapIdx == -1) {
-        return;
-    }
-    mesh->property(m_heapIdxProp, m_pQueue[heapIdx].m_edgeHandle) = -1;
+void SkeletonExtraction::deleteEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric) {
+    int heapIdx = m_pQueueHeapIdx[skErrorMetric];
+    m_pQueueHeapIdx.erase(m_pQueueHeapIdx.find(skErrorMetric));
 
-    m_pQueue[heapIdx] = m_pQueue[m_currentTailIdx--];
-    mesh->property(m_heapIdxProp, m_pQueue[heapIdx].m_edgeHandle) = heapIdx;
+    m_pQueueHeapIdx[m_pQueue[m_pQueueHeapIdx.size()-1]] = heapIdx;
+    m_pQueue[heapIdx] = m_pQueue[m_pQueueHeapIdx.size()-1];
+
+    m_pQueue.pop_back();
 
     propagateToTop(mesh, heapIdx);
     propagateToBottom(mesh, heapIdx);
 }
 
-void SkeletonExtraction::changeEdge(Tri_Mesh *mesh, int heapIdx) {
-    if(heapIdx == -1) {
-        return;
-    }
-    SKErrorMetric newErrorMetric = computeErrorMetric(mesh, m_pQueue[heapIdx].m_edgeHandle);
-    if (m_pQueue[heapIdx].m_metric < newErrorMetric.m_metric) {
-        m_pQueue[heapIdx] = newErrorMetric;
-
-        propagateToTop(mesh, heapIdx);
-
-    }
-    else {
-        m_pQueue[heapIdx] = newErrorMetric;
-
-        propagateToBottom(mesh, heapIdx);
-    }
+void SkeletonExtraction::changeEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric) {
+    // both should ensure the m_pQueueHeapIdx is always correct
+    propagateToTop(mesh, m_pQueueHeapIdx[skErrorMetric]);
+    propagateToBottom(mesh, m_pQueueHeapIdx[skErrorMetric]);
 }
 
-void SkeletonExtraction::initErrorMetric(Tri_Mesh *mesh) {
+void
+SkeletonExtraction::initErrorMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                                    std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap) {
     // Fix template type
     mesh->add_property(m_K);
-    mesh->add_property(m_heapIdxProp);
+//    mesh->add_property(m_heapIdxProp);
 
-    for (OMT::VIter v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it)
-    {
+    // add one dummy pointer
+    m_pQueue.push_back(nullptr);
+
+    for (OMT::VIter v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it) {
         // initialize
-        updateVertexK(mesh, *v_it);
-    }
-}
+        std::vector<SKErrorMetric> &halfedgeList = outHalfedgeMap[*v_it] = std::vector<SKErrorMetric>();
 
-void SkeletonExtraction::updateVertexK(Tri_Mesh *mesh, OMT::VHandle vertexHandle) {
-    OMT::Scalar *pointCoord = mesh->point(vertexHandle).data();
-    OMT::Point vPoint = OMT::Point(pointCoord[0], pointCoord[1], pointCoord[2]);
-    Eigen::Vector3d vP(vPoint[0], vPoint[1], vPoint[2]);
-    mesh->property(m_K, vertexHandle).setZero();
-    for (OMT::VOHEIter voh_it = mesh->voh_begin(vertexHandle); voh_it != mesh->voh_end(vertexHandle); ++voh_it) {
-        OMT::VHandle toVertexHandle = mesh->to_vertex_handle(*voh_it);
-        OMT::Point p = mesh->point(toVertexHandle);
-        Eigen::Vector3d a(p[0]-vPoint[0], p[1]-vPoint[1], p[2]-vPoint[2]);
-        a.normalize();
-        Eigen::Vector3d b = a.cross(vP);
-        Eigen::MatrixXd K(3, 4);
-        K << 0, -a[2], a[1], -b[0],
-        a[2], 0, -a[0], -b[1],
-        -a[1], a[0], 0, -b[2];
-        mesh->property(m_K, vertexHandle) += (K.transpose() * K);
-    }
-}
-
-bool SkeletonExtraction::collapseEdge(Tri_Mesh *mesh, OMT::HEHandle halfedgeHandle) {
-//    Timer timer;
-//    timer.updateCurrentTime();
-//    wxLogMessage("Debug - 1");
-//    wxLogMessage("Debug - 2 : is_valid %d", halfedgeHandle.is_valid());
-//    bool toLoop = mesh->next_halfedge_handle(mesh->next_halfedge_handle(halfedgeHandle)) == halfedgeHandle;
-//    OMT::HEHandle oppositeHalfedgeHandle = mesh->opposite_halfedge_handle(halfedgeHandle);
-//    bool fromLoop = mesh->next_halfedge_handle(mesh->next_halfedge_handle(oppositeHalfedgeHandle)) == oppositeHalfedgeHandle;
-//    if (toLoop) {
-//        // this infer that current from vertex's connectivity is 2, dont delete them
-//        deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(mesh->next_halfedge_handle(halfedgeHandle))));
-//        deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(halfedgeHandle)));
-//    } else if (fromLoop) {
-//        // this infer that current from vertex's connectivity is 2, dont delete them
-//        deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(mesh->next_halfedge_handle(oppositeHalfedgeHandle))));
-//        deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(oppositeHalfedgeHandle)));
-//    } else if (isCollapsable(mesh, halfedgeHandle)) {
-//    if (isCollapsable(mesh, halfedgeHandle)) {
-    bool isNoFaceAround = false;
-    if (mesh->is_collapse_ok(halfedgeHandle)) {
-        if (isCollapsable(m_operateMesh, halfedgeHandle)) {
-            // FIXME it may collapse to itself.... means from and to vertex is both itself
-//        wxLogMessage("Debug - 2-1");
-
-            OMT::VHandle toEdgeVertexHandle = mesh->to_vertex_handle(halfedgeHandle);
-            OMT::VHandle fromEdgeVertexHandle = mesh->from_vertex_handle(halfedgeHandle);
-            if (fromEdgeVertexHandle == toEdgeVertexHandle) {
-                deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(halfedgeHandle)));
-                mesh->delete_edge(mesh->edge_handle(halfedgeHandle));
-                return true;
-            }
-//        wxLogMessage("collapseEdge: vertexIdx=%d, vertexIdx=%d", fromEdgeVertexHandle.idx(), toEdgeVertexHandle.idx());
-
-            std::set<OMT::VHandle> commonVertexSet;
-
-            std::set<OMT::HEHandle> edgeFaceSet;
-            std::set<OMT::EHandle> deleteEdgeSet;
-            std::set<OMT::VHandle> modifiedVertexSet;
-
-            std::set<OMT::EHandle> allEdgeSet;
-
-
-            // collect edges to form face
-            std::set<OMT::VHandle> fromVertexOneRingSet;
-            for (OMT::VOHEIter voh_it = mesh->voh_begin(fromEdgeVertexHandle); voh_it != mesh->voh_end(fromEdgeVertexHandle); ++voh_it) {
-                fromVertexOneRingSet.insert(mesh->to_vertex_handle(*voh_it));
-                allEdgeSet.insert(mesh->edge_handle(*voh_it));
-//            wxLogMessage("fromVertexOneRingSet: edgeIdx=%d, vertexIdx=%d", mesh->edge_handle(*voh_it).idx(), mesh->to_vertex_handle(*voh_it).idx());
-//            OMT::FHandle fHandle = mesh->face_handle(*voh_it);
-//            for (OMT::FEIter fe_it = mesh->fe_begin(fHandle); fe_it != mesh->fe_end(fHandle); ++fe_it) {
-//                wxLogMessage("fromVertexOneRingSet face: edgeIdx=%d, vertexIdx=%d, %d", fe_it->idx(), mesh->from_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx(), mesh->to_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx());
-//            }
-//            fHandle = mesh->face_handle(mesh->opposite_halfedge_handle(*voh_it));
-//            for (OMT::FEIter fe_it = mesh->fe_begin(fHandle); fe_it != mesh->fe_end(fHandle); ++fe_it) {
-//                wxLogMessage("fromVertexOneRingSet face opposite: edgeIdx=%d, vertexIdx=%d, %d", fe_it->idx(), mesh->from_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx(), mesh->to_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx());
-//            }
-            }
-//        wxLogMessage("Debug - 2-2");
-
-            std::set<OMT::VHandle> toVertexOneRingSet;
-            for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-                toVertexOneRingSet.insert(mesh->to_vertex_handle(*voh_it));
-                allEdgeSet.insert(mesh->edge_handle(*voh_it));
-//            wxLogMessage("toVertexOneRingSet: edgeIdx=%d, vertexIdx=%d", mesh->edge_handle(*voh_it).idx(), mesh->to_vertex_handle(*voh_it).idx());
-//            OMT::FHandle fHandle = mesh->face_handle(*voh_it);
-//            if (fHandle.is_valid()) {
-//                for (OMT::FEIter fe_it = mesh->fe_begin(fHandle); fe_it != mesh->fe_end(fHandle); ++fe_it) {
-//                    wxLogMessage("toVertexOneRingSet face: edgeIdx=%d, vertexIdx=%d, %d", fe_it->idx(), mesh->from_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx(), mesh->to_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx());
-//                }
-//            }
-//            fHandle = mesh->face_handle(mesh->opposite_halfedge_handle(*voh_it));
-//            if (fHandle.is_valid()) {
-//                for (OMT::FEIter fe_it = mesh->fe_begin(fHandle); fe_it != mesh->fe_end(fHandle); ++fe_it) {
-//                    wxLogMessage("toVertexOneRingSet face opposite: edgeIdx=%d, vertexIdx=%d, %d", fe_it->idx(), mesh->from_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx(), mesh->to_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx());
-//                }
-//            }
-//            else {
-//                fHandle = mesh->face_handle(mesh->opposite_halfedge_handle(*voh_it));
-//                for (OMT::FEIter fe_it = mesh->fe_begin(fHandle); fe_it != mesh->fe_end(fHandle); ++fe_it) {
-//                    wxLogMessage("toVertexOneRingSet face: edgeIdx=%d, vertexIdx=%d, %d", fe_it->idx(), mesh->from_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx(), mesh->to_vertex_handle(mesh->halfedge_handle(*fe_it, 0)).idx());
-//                }
-//            }
-            }
-            set_intersection(fromVertexOneRingSet.begin(), fromVertexOneRingSet.end(), toVertexOneRingSet.begin(), toVertexOneRingSet.end(),
-                             std::inserter(commonVertexSet, commonVertexSet.begin()));
-
-            //        for (OMT::VHandle fromVertexOneRingHandle: fromVertexOneRingSet) {
-            //            OMT::HEHandle fromVertexToCommonHalfedge = mesh->find_halfedge(fromEdgeVertexHandle, fromVertexOneRingHandle);
-            //            wxLogMessage("Delete edge %d", mesh->edge_handle(fromVertexToCommonHalfedge).idx());
-            //            deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(fromVertexToCommonHalfedge)));
-            //        }
-//        std::set<OMT::EHandle> deletedEdgeSet;
-//        for (OMT::VHandle commonVertex: commonVertexSet) {
-//            OMT::HEHandle fromVertexToCommonHalfedge = mesh->find_halfedge(fromEdgeVertexHandle, commonVertex);
-////            wxLogMessage("Delete edge %d", mesh->edge_handle(fromVertexToCommonHalfedge).idx());
-//            deletedEdgeSet.insert(mesh->edge_handle(fromVertexToCommonHalfedge));
-//            deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(fromVertexToCommonHalfedge)));
-//        }
-//        deletedEdgeSet.insert(mesh->edge_handle(halfedgeHandle));
-//        deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(halfedgeHandle)));
-//        wxLogMessage("Debug - 2-3");
-            // FIXME next_halfedge bug here
-
-
-            //        mesh->request_face_status();
-            //        mesh->request_edge_status();
-            //        mesh->request_vertex_status();
-
-            mesh->collapse(halfedgeHandle);
-            // FIXME need post process? delete edge connected backward, edge connect twice
-
-            //        std::vector<OMT::HEHandle> fromEdgeVertexOneRingList;
-            //        OMT::VOHEIter vohFrom_it = mesh->voh_iter(fromEdgeVertexHandle);
-            //        while(mesh->to_vertex_handle(*vohFrom_it) != toEdgeVertexHandle) {
-            //            ++vohFrom_it;
-            //        }
-            //        do {
-            //            OMT::VHandle currentVertexHandle = mesh->to_vertex_handle(*vohFrom_it);
-            //            ++vohFrom_it;
-            //            OMT::VHandle nextVertexHandle = mesh->to_vertex_handle(*vohFrom_it);
-            //            fromEdgeVertexOneRingList.push_back(mesh->find_halfedge(currentVertexHandle, nextVertexHandle));
-            //        }while(mesh->to_vertex_handle(*vohFrom_it) != toEdgeVertexHandle);
-            //
-            //        mesh->delete_vertex(fromEdgeVertexHandle);
-            //        for (int i = 0; i < fromEdgeVertexOneRingList.size()-1; ++i) {
-            //            int idx = i+1;
-            //            if (mesh->to_vertex_handle(fromEdgeVertexOneRingList[idx]) == toEdgeVertexHandle) {
-            //                continue;
-            //            }
-            //            OMT::FHandle fHandle = mesh->add_face(toEdgeVertexHandle, mesh->to_vertex_handle(fromEdgeVertexOneRingList[i]), mesh->to_vertex_handle(fromEdgeVertexOneRingList[idx]));
-            //            if(!fHandle.is_valid()) {
-            //                fHandle = mesh->add_face(toEdgeVertexHandle, mesh->to_vertex_handle(fromEdgeVertexOneRingList[idx]), mesh->to_vertex_handle(fromEdgeVertexOneRingList[i]));
-            //                if (!fHandle.is_valid()) {
-            //                    wxLogMessage("Create Face failed");
-            //                    return false;
-            //                } else {
-            //                    OMT::FEIter fe_it = mesh->fe_iter(fHandle);
-            //                    while(*fe_it == mesh->edge_handle(fromEdgeVertexOneRingList[idx]) || *fe_it == mesh->edge_handle(fromEdgeVertexOneRingList[i])) {
-            //                        ++fe_it;
-            //                    }
-            //                    wxLogMessage("insert edge %d", fe_it->idx());
-            //                    insertEdge(mesh, *fe_it);
-            //                }
-            //            } else {
-            //                OMT::FEIter fe_it = mesh->fe_iter(fHandle);
-            //                while(*fe_it == mesh->edge_handle(fromEdgeVertexOneRingList[idx]) || *fe_it == mesh->edge_handle(fromEdgeVertexOneRingList[i])) {
-            //                    ++fe_it;
-            //                }
-            //                wxLogMessage("insert edge %d", fe_it->idx());
-            //
-            //                insertEdge(mesh, *fe_it);
-            //            }
-            ////            wxLogMessage("Create Face State %d", fHandle.is_valid());
-            //        }
-//        wxLogMessage("Debug - 2-4");
-//        for(auto deletedEdge : deletedEdgeSet) {
-//            wxLogMessage("Supposed to Deleted Edge idx=%d, valid=%d, isDeleted=%d", deletedEdge.idx(), deletedEdge.is_valid(), mesh->status(deletedEdge).deleted());
-//        }
-//        int deletedEdgeInAllEdge = 0;
-// Delete selfedge
-//        for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-//            if (mesh->from_vertex_handle(*voh_it) == mesh->to_vertex_handle(*voh_it)) {
-//                mesh->delete_edge(mesh->edge_handle(*voh_it));
-//            }
-//        }
-// Delete multiedge
-//        for(auto allOneRingEdge : allEdgeSet) {
-//            if (!mesh->face_handle(mesh->halfedge_handle(allOneRingEdge, 0)).is_valid()) {
-//                mesh->delete_edge(allOneRingEdge);
-//            }
-//        }
-
-            for(auto allOneRingEdge : allEdgeSet) {
-//            wxLogMessage("All Edge idx=%d, valid=%d, isDeleted=%d", allOneRingEdge.idx(), allOneRingEdge.is_valid(), mesh->status(allOneRingEdge).deleted());
-                if (mesh->status(allOneRingEdge).deleted()) {
-                    deleteEdge(mesh, mesh->property(m_heapIdxProp, allOneRingEdge));
-//                deletedEdgeInAllEdge++;
-                }
-            }
-//        if(deletedEdgeInAllEdge != deletedEdgeSet.size()) {
-//            wxLogMessage("Deleted edge inconsistent=%d, %d", deletedEdgeInAllEdge, deletedEdgeSet.size());
-//        }
-            for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-                updateVertexK(mesh, mesh->to_vertex_handle(*voh_it));
-            }
-            updateVertexK(mesh, toEdgeVertexHandle);
-            std::set<OMT::EHandle> changeEdgeSet;
-//        for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-//            for (OMT::VOHEIter outer_voh_it = mesh->voh_begin(mesh->to_vertex_handle(*voh_it)); outer_voh_it != mesh->voh_end(mesh->to_vertex_handle(*voh_it)); ++outer_voh_it) {
-////                wxLogMessage("Debug - 2-4-3");
-//                changeEdgeSet.insert(mesh->edge_handle(*outer_voh_it));
-////                wxLogMessage("Debug - 2-4-4");
-//            }
-//            changeEdgeSet.insert(mesh->edge_handle(*voh_it));
-////            wxLogMessage("Debug - 2-4-5");
-//        }
-//        for(auto eHandle: changeEdgeSet) {
-//            changeEdge(mesh, mesh->property(m_heapIdxProp, eHandle));
-//            wxLogMessage("change edge %d", eHandle.idx());
-//        }
-            for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-                for (OMT::VOHEIter outer_voh_it = mesh->voh_begin(mesh->to_vertex_handle(*voh_it)); outer_voh_it != mesh->voh_end(mesh->to_vertex_handle(*voh_it)); ++outer_voh_it) {
-                    changeEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(*outer_voh_it)));
-                }
-                changeEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(*voh_it)));
-            }
-//        wxLogMessage("Debug - 2-5");
-        } else {
-            deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(halfedgeHandle)));
-            isNoFaceAround = true;
+        OMT::Scalar *pointCoord = mesh->point(*v_it).data();
+        OMT::Point vPoint = OMT::Point(pointCoord[0], pointCoord[1], pointCoord[2]);
+        Eigen::Vector3d vP(vPoint[0], vPoint[1], vPoint[2]);
+        mesh->property(m_K, *v_it).setZero();
+        for (OMT::VOHEIter voh_it = mesh->voh_begin(*v_it); voh_it != mesh->voh_end(*v_it); ++voh_it) {
+            OMT::VHandle toVertexHandle = mesh->to_vertex_handle(*voh_it);
+            OMT::Point p = mesh->point(toVertexHandle);
+            Eigen::Vector3d a(p[0] - vPoint[0], p[1] - vPoint[1], p[2] - vPoint[2]);
+            a.normalize();
+            Eigen::Vector3d b = a.cross(vP);
+            Eigen::MatrixXd K(3, 4);
+            K << 0, -a[2], a[1], -b[0],
+                    a[2], 0, -a[0], -b[1],
+                    -a[1], a[0], 0, -b[2];
+            mesh->property(m_K, *v_it) += (K.transpose() * K);
+            halfedgeList.push_back(SKErrorMetric(*v_it, toVertexHandle, 0));
+            m_pQueue.push_back(&halfedgeList[halfedgeList.size()-1]);
         }
-    } else {
-        // temporary
-        wxLogMessage("Not collapsable");
-        m_discardedErrorMetric.push_back(m_pQueue[mesh->property(m_heapIdxProp, mesh->edge_handle(halfedgeHandle))]);
-        deleteEdge(mesh, mesh->property(m_heapIdxProp, mesh->edge_handle(halfedgeHandle)));
     }
-    if (isNoFaceAround && m_discardedErrorMetric.empty() && m_currentTailIdx == 0) {
+
+    for (OMT::VIter v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it) {
+        for (auto &element: outHalfedgeMap) {
+            std::vector<SKErrorMetric> &outHalfedgeList = element.second;
+            for (auto &outHalfedge: outHalfedgeList) {
+                computeErrorMetric(mesh, outHalfedge);
+            }
+        }
+        std::vector<SkeletonFace> &faceList = outFaceMap[*v_it] = std::vector<SkeletonFace>();
+        SkeletonFace skeletonFace;
+        skeletonFace.m_from = *v_it;
+        for (OMT::VFIter vf_it = mesh->vf_begin(*v_it); vf_it != mesh->vf_end(*v_it); ++vf_it) {
+            OMT::FVIter fv_it = mesh->fv_iter(*vf_it);
+            while (*fv_it != *v_it) {
+                ++fv_it;
+            }
+            ++fv_it;
+            skeletonFace.m_to[0] = *fv_it;
+            ++fv_it;
+            skeletonFace.m_to[1] = *fv_it;
+            faceList.push_back(skeletonFace);
+            m_totalFace++;
+        }
+    }
+}
+
+bool SkeletonExtraction::collapseEdge(Tri_Mesh *mesh,
+                                      std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                                      std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap) {
+    // because openmesh's collapse() can't change the face connectivity, so I had to manually keep these info
+    bool isFoundMin = false;
+    double minMetric = 1e10;
+    OMT::VHandle collapseVertex;
+    std::vector<SKErrorMetric>::iterator collapseHalfedgeIter;
+    for (auto &element: outHalfedgeMap) {
+        std::vector<SKErrorMetric> &outHalfedgeList = element.second;
+        for (auto outHalfedgeIter = outHalfedgeList.begin();
+             outHalfedgeIter != outHalfedgeList.end(); ++outHalfedgeIter) {
+            double metric = outHalfedgeIter->m_metric;
+            if (metric < minMetric) {
+                // Don't collapse the edge that would break the connected component
+                // this halfedge implicitly imply that from and to vertex have edge connectivity at least 1, so we just have to check the face existence
+                if (!outFaceMap[outHalfedgeIter->m_from].empty() && !outFaceMap[outHalfedgeIter->m_to].empty()) {
+                    isFoundMin = true;
+                    minMetric = metric;
+
+                    collapseVertex = element.first;
+                    collapseHalfedgeIter = outHalfedgeIter;
+                }
+            }
+        }
+        if (isFoundMin) {
+            break;
+        }
+    }
+    if (!isFoundMin) {
         return false;
     }
-//    wxLogMessage("Debug - 3");
-    return true;
+    OMT::VHandle fromVertexHandle = collapseHalfedgeIter->m_from, toVertexHandle = collapseHalfedgeIter->m_to;
 
-//    wxLogMessage("Elapsed: %f", timer.calculateDiffMilliSecondTime());
-}
+    halfedgeCollapse(outHalfedgeMap, outFaceMap, collapseHalfedgeIter);
 
-void SkeletonExtraction::initEdgeMetric(Tri_Mesh *mesh) {
-    m_cost.resize(mesh->n_edges());
-    for (OMT::EIter e_it = mesh->edges_begin(); e_it != mesh->edges_end(); ++e_it) {
-        m_cost[e_it->idx()] = computeErrorMetric(mesh, *e_it).m_metric;
+    // Update K value according to paper
+    mesh->property(m_K, toVertexHandle) = (mesh->property(m_K, toVertexHandle) + mesh->property(m_K, fromVertexHandle));
+
+    // Because the "to vertex"'s K value change, according to original formula, the halfedge error metric around "to vertex" should be changed too.
+    std::vector<SKErrorMetric> &toOutHalfedgeList = outHalfedgeMap[toVertexHandle];
+    for (auto outHalfedgeIter = toOutHalfedgeList.begin();
+         outHalfedgeIter != toOutHalfedgeList.end(); ++outHalfedgeIter) {
+        computeErrorMetric(mesh, *outHalfedgeIter);
+        for (auto toHalfedgeIter = outHalfedgeMap[outHalfedgeIter->m_to].begin();
+             toHalfedgeIter != outHalfedgeMap[outHalfedgeIter->m_to].end(); ++toHalfedgeIter) {
+            computeErrorMetric(mesh, *toHalfedgeIter);
+        }
     }
-    m_isDiscard.resize(mesh->n_edges(), false);
+    return m_totalFace > 0;
 }
-void SkeletonExtraction::easierCollapseEdge(Tri_Mesh *mesh) {
-//    Timer timer;
-//    timer.updateCurrentTime();
-    double minK = 1e10;
-    OMT::HEHandle optimalHE;
-    for (OMT::EIter e_it = mesh->edges_begin();e_it != mesh->edges_end();++e_it) {
-        if (!m_isDiscard[mesh->halfedge_handle(*e_it, 0).idx()] && isCollapsable(mesh, mesh->halfedge_handle(*e_it, 0))) {
-            double em = m_cost[mesh->halfedge_handle(*e_it, 0).idx()];
-            if (em < minK) {
-                minK = em;
-                optimalHE = mesh->halfedge_handle(*e_it, 0);
+
+void SkeletonExtraction::halfedgeCollapse(std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                                          std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap,
+                                          std::vector<SKErrorMetric>::iterator collapseEdgeIter) {
+    // erase element in outHalfedgeMap
+    OMT::VHandle fromVertexHandle = collapseEdgeIter->m_from;
+    OMT::VHandle toVertexHandle = collapseEdgeIter->m_to;
+
+    // The process is first remove the halfedge from "fromVertexHandle", and then add back the halfedge
+    // like below
+    // other vertex - "fromVertexHandle"
+    // ->
+    // other vertex - "toVertexHandle"
+    // halfedge deal phase
+    for (auto fromHalfedgeIter = outHalfedgeMap[fromVertexHandle].begin();
+         fromHalfedgeIter != outHalfedgeMap[fromVertexHandle].end(); ++fromHalfedgeIter) {
+
+        // remove all halfedge which one side of it is fromVertexHandle
+        for (auto toOfFromHalfedgeIter = outHalfedgeMap[fromHalfedgeIter->m_to].begin();
+             toOfFromHalfedgeIter != outHalfedgeMap[fromHalfedgeIter->m_to].end(); ++toOfFromHalfedgeIter) {
+            if (toOfFromHalfedgeIter->m_to == fromVertexHandle) {
+                outHalfedgeMap[fromHalfedgeIter->m_to].erase(toOfFromHalfedgeIter);
+                break;
+            }
+        }
+
+        // add back the other vertex's edge connectivity to toVertexHandle
+        if (fromHalfedgeIter->m_to != toVertexHandle) {
+            bool isCommonVertex = false;
+            // ignore the common vertex of toVertexHandle and fromVertexHandle
+            for (auto toHalfedgeIter = outHalfedgeMap[toVertexHandle].begin(); toHalfedgeIter != outHalfedgeMap[toVertexHandle].end(); ++toHalfedgeIter) {
+                if (toHalfedgeIter->m_to == fromHalfedgeIter->m_to) {
+                    isCommonVertex = true;
+                    break;
+                }
+            }
+            if (!isCommonVertex) {
+                // remember to update this SKErrorMetric
+                outHalfedgeMap[toVertexHandle].push_back(SKErrorMetric(toVertexHandle, fromHalfedgeIter->m_to, 0));
+                outHalfedgeMap[fromHalfedgeIter->m_to].push_back(SKErrorMetric(fromHalfedgeIter->m_to, toVertexHandle, 0));
             }
         }
     }
-    OMT::VHandle toEdgeVertexHandle = mesh->to_vertex_handle(optimalHE);
-    OMT::VHandle fromEdgeVertexHandle = mesh->from_vertex_handle(optimalHE);
+    // Remove fromVertexHandle's halfedge info
+    outHalfedgeMap.erase(outHalfedgeMap.find(fromVertexHandle));
 
-    std::set<OMT::HEHandle> oneRingSet;
-    std::vector<OMT::HEHandle> fromEdgeVertexOneRingList;
-    for (OMT::VOHEIter voh_it = mesh->voh_begin(fromEdgeVertexHandle); voh_it != mesh->voh_end(fromEdgeVertexHandle); ++voh_it) {
-        oneRingSet.insert(*voh_it);
-        fromEdgeVertexOneRingList.push_back(*voh_it);
-    }
-    for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-        oneRingSet.insert(*voh_it);
-    }
-
-//    mesh->collapse(optimalHE);
-    mesh->delete_vertex(fromEdgeVertexHandle);
-    for (int i = 0; i < fromEdgeVertexOneRingList.size(); ++i) {
-        OMT::HEHandle he = fromEdgeVertexOneRingList[i];
-        if (mesh->to_vertex_handle(he) != toEdgeVertexHandle) {
-            if (!mesh->find_halfedge(toEdgeVertexHandle, mesh->to_vertex_handle(he)).is_valid()) {
-                int idx = i==0?-1:i-1;
-                OMT::FHandle fHandle = mesh->add_face(toEdgeVertexHandle, mesh->to_vertex_handle(he), mesh->to_vertex_handle(fromEdgeVertexOneRingList[idx]));
-                if(!fHandle.is_valid()) {
-                    wxLogMessage("Create Face failed");
+    // face deal phase
+    for (auto fromFaceIter = outFaceMap[fromVertexHandle].begin();fromFaceIter != outFaceMap[fromVertexHandle].end();++fromFaceIter) {
+        // Remove adjacent face vertex of fromVertexHandle, fromVertexHandle involved face
+        for (int i = 0;i < 2;++i) {
+            for(auto toOfFromFaceIter = outFaceMap[fromFaceIter->m_to[i]].begin(); toOfFromFaceIter != outFaceMap[fromFaceIter->m_to[i]].end();) {
+                if (toOfFromFaceIter->m_to[0] == fromVertexHandle || toOfFromFaceIter->m_to[1] == fromVertexHandle) {
+                    toOfFromFaceIter = outFaceMap[fromFaceIter->m_to[i]].erase(toOfFromFaceIter);
+                    --m_totalFace;
+                }
+                else {
+                    ++toOfFromFaceIter;
                 }
             }
         }
-    }
+        // Add back adjacent face vertex of fromVertexHandle, change fromVertexHandle involved face to toVertexHandle involved face
+        SkeletonFace skeletonFace;
+        // ensure that these face didn't involve the toVertexHandle, or it will be duplicate face
+        if ((fromFaceIter->m_to[0] != toVertexHandle) && (fromFaceIter->m_to[1] != toVertexHandle)) {
+            skeletonFace.m_from = toVertexHandle;
+            skeletonFace.m_to[0] = fromFaceIter->m_to[0];
+            skeletonFace.m_to[1] = fromFaceIter->m_to[1];
+            outFaceMap[toVertexHandle].push_back(skeletonFace);
+            m_totalFace += 1;
 
+            skeletonFace.m_from = fromFaceIter->m_to[0];
+            skeletonFace.m_to[0] = fromFaceIter->m_to[1];
+            skeletonFace.m_to[1] = toVertexHandle;
+            outFaceMap[fromFaceIter->m_to[0]].push_back(skeletonFace);
+            m_totalFace += 1;
 
-    for (OMT::VOHEIter voh_it = mesh->voh_begin(toEdgeVertexHandle); voh_it != mesh->voh_end(toEdgeVertexHandle); ++voh_it) {
-        updateVertexK(mesh, mesh->to_vertex_handle(*voh_it));
-//            wxLogMessage("toVertexOneRingSet 1: edgeIdx=%d, vertexIdx=%d", mesh->edge_handle(*voh_it).idx(), mesh->to_vertex_handle(*voh_it).idx());
-    }
-    updateVertexK(mesh, toEdgeVertexHandle);
-
-    for (auto he : oneRingSet) {
-        if (mesh->find_halfedge(toEdgeVertexHandle, mesh->to_vertex_handle(he)).is_valid()) {
-            m_cost[he.idx()] = computeErrorMetric(mesh, mesh->edge_handle(he)).m_metric;
-        } else {
-            m_isDiscard[he.idx()] = true;
+            skeletonFace.m_from = fromFaceIter->m_to[1];
+            skeletonFace.m_to[0] = toVertexHandle;
+            skeletonFace.m_to[1] = fromFaceIter->m_to[0];
+            outFaceMap[fromFaceIter->m_to[1]].push_back(skeletonFace);
+            m_totalFace += 1;
         }
     }
-
+    m_totalFace -= outFaceMap[fromVertexHandle].size();
+    outFaceMap.erase(outFaceMap.find(fromVertexHandle));
 }
 
-SKErrorMetric SkeletonExtraction::computeErrorMetric(Tri_Mesh *mesh, OMT::EHandle edgeHandle) {
+void SkeletonExtraction::computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em) {
     // get one-ring
-    OMT::HEHandle halfedgeHandle = mesh->halfedge_handle(edgeHandle, 0);
-    OMT::VHandle toEdgeVertexHandle = mesh->to_vertex_handle(halfedgeHandle);
-    OMT::Point toVertexPoint = mesh->point(toEdgeVertexHandle);
+    OMT::Point toVertexPoint = mesh->point(em.m_to);
     Eigen::Vector4d toP(toVertexPoint[0], toVertexPoint[1], toVertexPoint[2], 1.0);
-    OMT::VHandle fromEdgeVertexHandle = mesh->from_vertex_handle(halfedgeHandle);
-    OMT::Point fromVertexPoint = mesh->point(fromEdgeVertexHandle);
+    OMT::Point fromVertexPoint = mesh->point(em.m_from);
     Eigen::Vector4d fromP(fromVertexPoint[0], fromVertexPoint[1], fromVertexPoint[2], 1.0);
 //    double F = (fromP.transpose() * mesh->property(m_K, toEdgeVertexHandle) * fromP) + (toP.transpose() * mesh->property(m_K, fromEdgeVertexHandle) * toP);
-    double Fa = (fromP.transpose() * mesh->property(m_K, toEdgeVertexHandle) * fromP);
-    Fa += (toP.transpose() * mesh->property(m_K, fromEdgeVertexHandle) * toP);
+    double Fa = (fromP.transpose() * mesh->property(m_K, em.m_to) * fromP);
+    Fa += (toP.transpose() * mesh->property(m_K, em.m_from) * toP);
 
     double Fb = 0.0;
-    for (OMT::VOHEIter voh_it = mesh->voh_begin(fromEdgeVertexHandle); voh_it !=mesh->voh_end(fromEdgeVertexHandle); ++voh_it) {
+    for (OMT::VOHEIter voh_it = mesh->voh_begin(em.m_from);
+         voh_it != mesh->voh_end(em.m_from); ++voh_it) {
         OMT::VHandle kVertexHandle = mesh->to_vertex_handle(*voh_it);
         OMT::Point kVertexPoint = mesh->point(kVertexHandle);
         Eigen::Vector4d kP(kVertexPoint[0], kVertexPoint[1], kVertexPoint[2], 1.0);
@@ -653,46 +536,49 @@ SKErrorMetric SkeletonExtraction::computeErrorMetric(Tri_Mesh *mesh, OMT::EHandl
     Fb *= (fromP - toP).norm();
 
     double F = m_wa * Fa + m_wb * Fb;
-    return { edgeHandle, F };
+    em.m_metric = F;
 }
 
 void SkeletonExtraction::simplifyMesh() {
-	int collapsePerPortion = m_operateMesh->n_vertices() / 10 * 2;
-	size_t halfedgeCount = m_operateMesh->n_halfedges();
-	if (!m_isInitializedQ) {
-        initErrorMetric(m_operateMesh);
-        for (OMT::EIter e_it = m_operateMesh->edges_sbegin(); e_it != m_operateMesh->edges_end(); ++e_it) {
-            insertEdge(m_operateMesh, *e_it);
-        }
+    std::map<OMT::VHandle, std::vector<SKErrorMetric>> outHalfedgeMap;
+    std::map<OMT::VHandle, std::vector<SkeletonFace>> outFaceMap;
+
+
+    if (!m_isInitializedQ) {
+        initErrorMetric(m_operateMesh, outHalfedgeMap, outFaceMap);
         m_isInitializedQ = true;
-	}
-//    initEdgeMetric(m_operateMesh);
-	// FIXME 1 collapsePerPortion
-	int i = 0;
-	while(true) {
-	    wxLogMessage("Collapsed to %u", i++);
-        wxLogMessage("Current priority queue %d", m_currentTailIdx);
-        if(m_currentTailIdx < 1) {
-//        wxLogMessage("Here?");
-            if(m_lastDiscardSize == m_discardedErrorMetric.size()) {
-                break;
-            }
-            m_lastDiscardSize = m_discardedErrorMetric.size();
-            for(auto em : m_discardedErrorMetric) {
-                if (!m_operateMesh->status(em.m_edgeHandle).deleted()) {
-                    insertEdge(m_operateMesh, em.m_edgeHandle);
-                }
-            }
-            m_discardedErrorMetric.clear();
-        }
-        if(m_currentTailIdx == 0) {
+    }
+    int i = 0;
+    while (m_totalFace > 0) {
+        wxLogMessage("Collapsed to %u", i++);
+        if (!collapseEdge(m_operateMesh, outHalfedgeMap, outFaceMap)) {
+            wxLogMessage("Collapse to end");
             break;
         }
-		SKErrorMetric em = getTopEdge(m_operateMesh);
-		if (!collapseEdge(m_operateMesh, m_operateMesh->halfedge_handle(em.m_edgeHandle, 0))) {
-		    wxLogMessage("Collapse to end");
-		    break;
-		}
 //        easierCollapseEdge(m_operateMesh);
-	}
+    }
+    m_operateMesh->m_edgeIndices = 0;
+    m_operateMesh->m_faceIndices = 0;
+
+    std::vector<uint32_t> edgeSkeletonIndices;
+
+    for(const auto &outHalfedgeList: outHalfedgeMap) {
+        for(const auto &outHalfedge: outHalfedgeList.second) {
+            edgeSkeletonIndices.push_back(outHalfedge.m_from.idx());
+            edgeSkeletonIndices.push_back(outHalfedge.m_to.idx());
+            m_operateMesh->m_edgeIndices += 2;
+        }
+    }
+    updateSkeletonEBO(edgeSkeletonIndices);
+}
+
+void SkeletonExtraction::updateSkeletonEBO(std::vector<uint32_t> &edgeSkeletonIndices) {
+//    // Tri face EBO
+//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_operateMesh->m_triFaceEbo);
+//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * triFaceIndices.size(), triFaceIndices.data(), GL_STATIC_DRAW);
+
+    // edge EBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_operateMesh->m_edgeEbo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * edgeSkeletonIndices.size(), edgeSkeletonIndices.data(), GL_STATIC_DRAW);
+
 }
