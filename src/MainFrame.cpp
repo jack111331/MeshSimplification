@@ -22,6 +22,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
                 EVT_BUTTON (BUTTON_Render, MyFrame::OnRender)
                 EVT_BUTTON (BUTTON_Skeleton, MyFrame::OnSkeleton)
                 EVT_BUTTON (BUTTON_SkeletonToLine, MyFrame::OnSkeletonToLine)
+                EVT_CHECKBOX (CHECKBOX_ShowJoint, MyFrame::OnShowJoint)
 wxEND_EVENT_TABLE()
 
 MyFrame::MyFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
@@ -91,6 +92,8 @@ MyFrame::MyFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
     m_skeletonToLine = new wxButton(m_leftPanel, BUTTON_SkeletonToLine, _T("Skeleton To Line"),
             // shows a button on this window
                               wxPoint(250, 235), wxSize(130, -1), 0);
+
+    m_showJoint = new wxCheckBox(m_leftPanel, CHECKBOX_ShowJoint, _T("Show joint"), wxPoint(100, 280), wxSize(130, -1), 0);
 
     m_log = new wxTextCtrl(m_leftPanel, wxID_ANY, wxString(), wxPoint(5, 350),
                            wxSize(400, 200), wxTE_MULTILINE);
@@ -212,6 +215,14 @@ void MyFrame::OnSkeletonToLine(wxCommandEvent &event) {
     context->getPipeline()->m_objectList[0]->m_mesh = m_mesh;
 
 //    m_mesh->updateVAO();
+    m_3DView->updated();
+//    std::string statusText = "Current vertices amount=" + std::to_string(m_skeletonExtraction->m_outHalfedgeMap.size()) + ", edges amount=" + std::to_string(m_mesh->m_edgeIndices/2);
+//    SetStatusText(statusText);
+}
+
+void MyFrame::OnShowJoint(wxCommandEvent &event) {
+    Context *context = Context::getInstance();
+    context->m_showJoint = m_showJoint->GetValue();
     m_3DView->updated();
 }
 

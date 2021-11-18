@@ -22,6 +22,8 @@ public:
 
     Tri_Mesh *m_mesh = nullptr;
 
+    bool m_showJoint = false;
+
 private:
     Context() : m_pipeline(nullptr) {}
     static Context *m_instance;

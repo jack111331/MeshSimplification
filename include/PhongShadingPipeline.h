@@ -48,6 +48,7 @@ private:
     uint32_t m_outputFrameTextureId;
     uint32_t m_outputFrameDepthStencilBufferId;
     ShaderProgram *m_anotherShader;
+    ShaderProgram *m_otherShader;
 
 };
 

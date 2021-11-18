@@ -6,6 +6,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <wx/wx.h>
+#include <Context.h>
 #include "PhongShadingPipeline.h"
 #include "ShaderProgram.h"
 
@@ -13,6 +14,7 @@ PhongShadingPass::PhongShadingPass(PassSetting *passSetting) : Pass(passSetting)
                                                                m_outputFrameDepthStencilBufferId(0) {
     m_shader = new ShaderProgram(ShaderInclude::load("resource/shader/local_shading/mesh.vs"), ShaderInclude::load("resource/shader/local_shading/face_mesh.fs"));
     m_anotherShader = new ShaderProgram(ShaderInclude::load("resource/shader/local_shading/mesh.vs"), ShaderInclude::load("resource/shader/local_shading/edge_mesh.fs"));
+    m_otherShader = new ShaderProgram(ShaderInclude::load("resource/shader/local_shading/mesh.vs"), ShaderInclude::load("resource/shader/local_shading/vertex_mesh.fs"));
     PhongShadingSetting *phongPassSetting = (PhongShadingSetting *) passSetting;
 
     glGenFramebuffers(1, &m_outputFrameBufferId);
@@ -100,6 +102,28 @@ void PhongShadingPass::renderPass(const std::vector<ShadeObject *> &shadingList)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object->m_mesh->m_edgeEbo);
             glLineWidth(1.2);
             glDrawElements(GL_LINES, object->m_mesh->m_edgeIndices, GL_UNSIGNED_INT, 0);
+        }
+        if (Context::getInstance()->m_showJoint) {
+            m_otherShader->bind();
+            for (auto object: shadingList) {
+
+                // object binding
+                glBindVertexArray(object->m_mesh->m_vao);
+
+                m_anotherShader->uniformMat4f("projection", setting->m_projectionMatrix);
+                m_anotherShader->uniformMat4f("view", setting->m_viewMatrix);
+
+                // world transformation
+                m_anotherShader->uniformMat4f("model", object->m_transformMat);
+
+                const Vec3f &eyeCoord = setting->m_camera->m_eyeCoord;
+                m_anotherShader->uniform3f("viewPos", eyeCoord.x, eyeCoord.y, eyeCoord.z);
+
+                // draw call
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object->m_mesh->m_edgeEbo);
+                glPointSize(5.0);
+                glDrawElements(GL_POINTS, object->m_mesh->m_edgeIndices, GL_UNSIGNED_INT, 0);
+            }
         }
 
     }

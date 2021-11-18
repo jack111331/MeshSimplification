@@ -2,6 +2,11 @@
 #include <cmath>
 #include <glad/glad.h>
 #include "Eigen/Dense"
+#include <algorithm>
+#include <Utility.h>
+
+#define USE_MINIMUM
+//#define USE_FIRST_MINIMUM
 
 void SkeletonExtraction::calculateSkeleton() {
     size_t vertexCount;
@@ -236,13 +241,13 @@ double SkeletonExtraction::calcCot(const OMT::Point &a, const OMT::Point &b) {
 //    return fromAdjacentV > 1 && fromAdjacentF > 0 && toAdjacentV > 1 && toAdjacentF > 0;
 //}
 
-void SkeletonExtraction::propagateToTop(Tri_Mesh *mesh, int heapIdx) {
+void SkeletonExtraction::propagateToTop(int heapIdx) {
     while (heapIdx > 1) {
-        if (*m_pQueue[heapIdx] < *m_pQueue[heapIdx / 2]) {
-            SKErrorMetric *temp = m_pQueue[heapIdx];
+        if (m_pQueue[heapIdx] < m_pQueue[heapIdx / 2]) {
+            SKErrorMetric temp = m_pQueue[heapIdx];
             int tempIdx = m_pQueueHeapIdx[temp];
 
-            m_pQueueHeapIdx[m_pQueue[heapIdx]] = m_pQueueHeapIdx[m_pQueue[heapIdx / 2]];
+            m_pQueueHeapIdx[temp] = m_pQueueHeapIdx[m_pQueue[heapIdx / 2]];
             m_pQueue[heapIdx] = m_pQueue[heapIdx / 2];
 
             m_pQueueHeapIdx[m_pQueue[heapIdx / 2]] = tempIdx;
@@ -255,12 +260,11 @@ void SkeletonExtraction::propagateToTop(Tri_Mesh *mesh, int heapIdx) {
     }
 }
 
-void SkeletonExtraction::propagateToBottom(Tri_Mesh *mesh, int heapIdx) {
-    // FIXME need to locate heapIdx
+void SkeletonExtraction::propagateToBottom(int heapIdx) {
     while (heapIdx < m_pQueue.size()) {
         int minIdx = -1;
-        if (heapIdx * 2 + 1 <= m_pQueue.size()) {
-            if (*m_pQueue[heapIdx * 2 + 1] < *m_pQueue[heapIdx * 2]) {
+        if (heapIdx * 2 + 1 < m_pQueue.size()) {
+            if (m_pQueue[heapIdx * 2 + 1] < m_pQueue[heapIdx * 2]) {
                 minIdx = heapIdx * 2 + 1;
             } else {
                 minIdx = heapIdx * 2;
@@ -269,11 +273,12 @@ void SkeletonExtraction::propagateToBottom(Tri_Mesh *mesh, int heapIdx) {
             minIdx = heapIdx * 2;
         }
         if (minIdx != -1) {
-            if (*m_pQueue[minIdx] < *m_pQueue[heapIdx]) {
-                SKErrorMetric *temp = m_pQueue[heapIdx];
+            if (m_pQueue[minIdx] < m_pQueue[heapIdx]) {
+
+                SKErrorMetric temp = m_pQueue[heapIdx];
                 int tempIdx = m_pQueueHeapIdx[temp];
 
-                m_pQueueHeapIdx[m_pQueue[heapIdx]] = m_pQueueHeapIdx[m_pQueue[minIdx]];
+                m_pQueueHeapIdx[temp] = m_pQueueHeapIdx[m_pQueue[minIdx]];
                 m_pQueue[heapIdx] = m_pQueue[minIdx];
 
                 m_pQueueHeapIdx[m_pQueue[minIdx]] = tempIdx;
@@ -289,33 +294,45 @@ void SkeletonExtraction::propagateToBottom(Tri_Mesh *mesh, int heapIdx) {
     }
 }
 
-void SkeletonExtraction::insertEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric) {
+void SkeletonExtraction::insertEdge(const SKErrorMetric &skErrorMetric) {
     m_pQueue.push_back(skErrorMetric);
-    m_pQueueHeapIdx[skErrorMetric] = m_pQueue.size()-1;
-    propagateToTop(mesh, m_pQueue.size()-1);
+
+    m_pQueueHeapIdx[skErrorMetric] = m_pQueue.size() - 1;
+    propagateToTop(m_pQueue.size() - 1);
 }
 
-SKErrorMetric *SkeletonExtraction::getTopEdge(Tri_Mesh *mesh) {
-    return m_pQueue[1];
+bool SkeletonExtraction::getTopEdge(SKErrorMetric &em) {
+    if (m_pQueue.size() == 1) {
+        return false;
+    }
+    wxLogMessage("Error metric=%f", m_pQueue[1].m_metric);
+    em = m_pQueue[1];
+    return true;
 }
 
-void SkeletonExtraction::deleteEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric) {
+void SkeletonExtraction::deleteEdge(const SKErrorMetric &skErrorMetric) {
     int heapIdx = m_pQueueHeapIdx[skErrorMetric];
+    SKErrorMetric last = m_pQueue[m_pQueue.size() - 1];
+    if (last == skErrorMetric) {
+        m_pQueueHeapIdx.erase(m_pQueueHeapIdx.find(skErrorMetric));
+        m_pQueue.pop_back();
+        return;
+    }
     m_pQueueHeapIdx.erase(m_pQueueHeapIdx.find(skErrorMetric));
 
-    m_pQueueHeapIdx[m_pQueue[m_pQueueHeapIdx.size()-1]] = heapIdx;
-    m_pQueue[heapIdx] = m_pQueue[m_pQueueHeapIdx.size()-1];
-
+    m_pQueueHeapIdx[last] = heapIdx;
+    m_pQueue[heapIdx] = last;
     m_pQueue.pop_back();
 
-    propagateToTop(mesh, heapIdx);
-    propagateToBottom(mesh, heapIdx);
+    propagateToTop(m_pQueueHeapIdx[last]);
+    propagateToBottom(m_pQueueHeapIdx[last]);
 }
 
-void SkeletonExtraction::changeEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric) {
+void SkeletonExtraction::changeEdge(const SKErrorMetric &skErrorMetric) {
     // both should ensure the m_pQueueHeapIdx is always correct
-    propagateToTop(mesh, m_pQueueHeapIdx[skErrorMetric]);
-    propagateToBottom(mesh, m_pQueueHeapIdx[skErrorMetric]);
+    m_pQueue[m_pQueueHeapIdx[skErrorMetric]].m_metric = skErrorMetric.m_metric;
+    propagateToTop(m_pQueueHeapIdx[skErrorMetric]);
+    propagateToBottom(m_pQueueHeapIdx[skErrorMetric]);
 }
 
 void
@@ -327,11 +344,14 @@ SkeletonExtraction::initErrorMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::
 //    mesh->add_property(m_heapIdxProp);
 
     // add one dummy pointer
-    m_pQueue.push_back(nullptr);
+    m_pQueue.push_back(SKErrorMetric(OMT::VHandle(), OMT::VHandle(), 0));
     int v_it_counter = 0;
     for (OMT::VIter v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it) {
-        wxLogMessage("Initing v_it=%d", v_it_counter++);
         // initialize
+        if(v_it->idx() != v_it_counter) {
+            wxLogMessage("%d %d mismatch!!", v_it_counter, v_it->idx());
+        }
+        m_vertexCollapseLabel.push_back(v_it->idx());
         outHalfedgeMap[*v_it] = std::vector<SKErrorMetric>();
         std::vector<SKErrorMetric> &halfedgeList = outHalfedgeMap[*v_it];
 
@@ -354,19 +374,21 @@ SkeletonExtraction::initErrorMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::
 //            m_pQueue.push_back(&halfedgeList[halfedgeList.size()-1]);
         }
         computeVertexMetric(mesh, outHalfedgeMap, *v_it);
+        v_it_counter++;
     }
     v_it_counter = 0;
 
     for (OMT::VIter v_it = mesh->vertices_begin(); v_it != mesh->vertices_end(); ++v_it) {
-        wxLogMessage("Initing v_it - 2 = %d", v_it_counter++);
 
         for (auto &outHalfedge: outHalfedgeMap[*v_it]) {
             computeErrorMetric(mesh, outHalfedge, outHalfedgeMap);
+#ifdef USE_MINIMUM
+            insertEdge(outHalfedge);
+#endif
         }
         outFaceMap[*v_it] = std::vector<SkeletonFace>();
         std::vector<SkeletonFace> &faceList = outFaceMap[*v_it];
         SkeletonFace skeletonFace;
-        skeletonFace.m_from = *v_it;
         for (OMT::VFIter vf_it = mesh->vf_begin(*v_it); vf_it != mesh->vf_end(*v_it); ++vf_it) {
             OMT::FVIter fv_it = mesh->fv_iter(*vf_it);
             while (*fv_it != *v_it) {
@@ -386,11 +408,28 @@ bool SkeletonExtraction::collapseEdge(Tri_Mesh *mesh,
                                       std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
                                       std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap) {
     // because openmesh's collapse() can't change the face connectivity, so I had to manually keep these info
-    wxLogMessage("Collapse Edge");
-    bool isFoundMin = false;
-    double minMetric = 1e10;
+//    wxLogMessage("Collapse Edge");
     OMT::VHandle collapseVertex;
     std::vector<SKErrorMetric>::iterator collapseHalfedgeIter;
+#ifdef USE_MINIMUM
+    SKErrorMetric topHeap(OMT::VHandle(), OMT::VHandle(), 0);
+    if (!getTopEdge(topHeap)) {
+        return false;
+    }
+    collapseVertex = topHeap.m_from;
+    for (auto outHalfedgeIter = outHalfedgeMap[collapseVertex].begin();
+         outHalfedgeIter != outHalfedgeMap[collapseVertex].end(); ++outHalfedgeIter) {
+        if (*outHalfedgeIter == topHeap) {
+            collapseHalfedgeIter = outHalfedgeIter;
+            break;
+        }
+    }
+    // FIXME criterion for face error
+#endif
+#ifdef USE_FIRST_MINIMUM
+    bool isFoundMin = false;
+    double minMetric = 1e10;
+
     for (auto &element: outHalfedgeMap) {
         std::vector<SKErrorMetric> &outHalfedgeList = element.second;
         for (auto outHalfedgeIter = outHalfedgeList.begin();
@@ -415,26 +454,35 @@ bool SkeletonExtraction::collapseEdge(Tri_Mesh *mesh,
     if (!isFoundMin) {
         return false;
     }
+#endif
     OMT::VHandle fromVertexHandle = collapseHalfedgeIter->m_from, toVertexHandle = collapseHalfedgeIter->m_to;
-
+    UnionAncestor(collapseHalfedgeIter->m_to.idx(), collapseHalfedgeIter->m_from.idx());
     halfedgeCollapse(outHalfedgeMap, outFaceMap, collapseHalfedgeIter);
 
     // Update K value according to paper
     mesh->property(m_K, toVertexHandle) = (mesh->property(m_K, toVertexHandle) + mesh->property(m_K, fromVertexHandle));
 
     // Because the "to vertex"'s K value change, according to original formula, the halfedge error metric around "to vertex" should be changed too.
-    for (auto toHalfedgeIter = outHalfedgeMap[toVertexHandle].begin(); toHalfedgeIter != outHalfedgeMap[toVertexHandle].end(); ++toHalfedgeIter) {
+    for (auto toHalfedgeIter = outHalfedgeMap[toVertexHandle].begin();
+         toHalfedgeIter != outHalfedgeMap[toVertexHandle].end(); ++toHalfedgeIter) {
         computeVertexMetric(mesh, outHalfedgeMap, toHalfedgeIter->m_to);
     }
     std::vector<SKErrorMetric> &toOutHalfedgeList = outHalfedgeMap[toVertexHandle];
     for (auto outHalfedgeIter = toOutHalfedgeList.begin();
          outHalfedgeIter != toOutHalfedgeList.end(); ++outHalfedgeIter) {
         computeErrorMetric(mesh, *outHalfedgeIter, outHalfedgeMap);
+#ifdef USE_MINIMUM
+        changeEdge(*outHalfedgeIter);
+#endif
         for (auto toHalfedgeIter = outHalfedgeMap[outHalfedgeIter->m_to].begin();
              toHalfedgeIter != outHalfedgeMap[outHalfedgeIter->m_to].end(); ++toHalfedgeIter) {
             computeErrorMetric(mesh, *toHalfedgeIter, outHalfedgeMap);
+#ifdef USE_MINIMUM
+            changeEdge(*toHalfedgeIter);
+#endif
         }
     }
+
     return m_totalFace > 0;
 }
 
@@ -458,6 +506,9 @@ void SkeletonExtraction::halfedgeCollapse(std::map<OMT::VHandle, std::vector<SKE
         for (auto toOfFromHalfedgeIter = outHalfedgeMap[fromHalfedgeIter->m_to].begin();
              toOfFromHalfedgeIter != outHalfedgeMap[fromHalfedgeIter->m_to].end(); ++toOfFromHalfedgeIter) {
             if (toOfFromHalfedgeIter->m_to == fromVertexHandle) {
+#ifdef USE_MINIMUM
+                deleteEdge(*toOfFromHalfedgeIter);
+#endif
                 outHalfedgeMap[fromHalfedgeIter->m_to].erase(toOfFromHalfedgeIter);
                 break;
             }
@@ -467,32 +518,46 @@ void SkeletonExtraction::halfedgeCollapse(std::map<OMT::VHandle, std::vector<SKE
         if (fromHalfedgeIter->m_to != toVertexHandle) {
             bool isCommonVertex = false;
             // ignore the common vertex of toVertexHandle and fromVertexHandle
-            for (auto toHalfedgeIter = outHalfedgeMap[toVertexHandle].begin(); toHalfedgeIter != outHalfedgeMap[toVertexHandle].end(); ++toHalfedgeIter) {
+            for (auto toHalfedgeIter = outHalfedgeMap[toVertexHandle].begin();
+                 toHalfedgeIter != outHalfedgeMap[toVertexHandle].end(); ++toHalfedgeIter) {
                 if (toHalfedgeIter->m_to == fromHalfedgeIter->m_to) {
                     isCommonVertex = true;
                     break;
                 }
             }
             if (!isCommonVertex) {
-                // remember to update this SKErrorMetric
                 outHalfedgeMap[toVertexHandle].push_back(SKErrorMetric(toVertexHandle, fromHalfedgeIter->m_to, 0));
-                outHalfedgeMap[fromHalfedgeIter->m_to].push_back(SKErrorMetric(fromHalfedgeIter->m_to, toVertexHandle, 0));
+#ifdef USE_MINIMUM
+                insertEdge(outHalfedgeMap[toVertexHandle][outHalfedgeMap[toVertexHandle].size() - 1]);
+#endif
+                outHalfedgeMap[fromHalfedgeIter->m_to].push_back(
+                        SKErrorMetric(fromHalfedgeIter->m_to, toVertexHandle, 0));
+#ifdef USE_MINIMUM
+                insertEdge(outHalfedgeMap[fromHalfedgeIter->m_to][outHalfedgeMap[fromHalfedgeIter->m_to].size() - 1]);
+#endif
             }
         }
     }
+#ifdef USE_MINIMUM
     // Remove fromVertexHandle's halfedge info
+    for (auto fromHalfedgeIter = outHalfedgeMap[fromVertexHandle].begin();
+         fromHalfedgeIter != outHalfedgeMap[fromVertexHandle].end(); ++fromHalfedgeIter) {
+        deleteEdge(*fromHalfedgeIter);
+    }
+#endif
     outHalfedgeMap.erase(outHalfedgeMap.find(fromVertexHandle));
 
     // face deal phase
-    for (auto fromFaceIter = outFaceMap[fromVertexHandle].begin();fromFaceIter != outFaceMap[fromVertexHandle].end();++fromFaceIter) {
+    for (auto fromFaceIter = outFaceMap[fromVertexHandle].begin();
+         fromFaceIter != outFaceMap[fromVertexHandle].end(); ++fromFaceIter) {
         // Remove adjacent face vertex of fromVertexHandle, fromVertexHandle involved face
-        for (int i = 0;i < 2;++i) {
-            for(auto toOfFromFaceIter = outFaceMap[fromFaceIter->m_to[i]].begin(); toOfFromFaceIter != outFaceMap[fromFaceIter->m_to[i]].end();) {
+        for (int i = 0; i < 2; ++i) {
+            for (auto toOfFromFaceIter = outFaceMap[fromFaceIter->m_to[i]].begin();
+                 toOfFromFaceIter != outFaceMap[fromFaceIter->m_to[i]].end();) {
                 if (toOfFromFaceIter->m_to[0] == fromVertexHandle || toOfFromFaceIter->m_to[1] == fromVertexHandle) {
                     toOfFromFaceIter = outFaceMap[fromFaceIter->m_to[i]].erase(toOfFromFaceIter);
                     --m_totalFace;
-                }
-                else {
+                } else {
                     ++toOfFromFaceIter;
                 }
             }
@@ -501,34 +566,36 @@ void SkeletonExtraction::halfedgeCollapse(std::map<OMT::VHandle, std::vector<SKE
         SkeletonFace skeletonFace;
         // ensure that these face didn't involve the toVertexHandle, or it will be duplicate face
         if ((fromFaceIter->m_to[0] != toVertexHandle) && (fromFaceIter->m_to[1] != toVertexHandle)) {
-            skeletonFace.m_from = toVertexHandle;
+
+            skeletonFace.m_to[0] = toVertexHandle;
+            skeletonFace.m_to[1] = fromFaceIter->m_to[0];
+            outFaceMap[fromFaceIter->m_to[1]].push_back(skeletonFace);
+            m_totalFace += 1;
+
             skeletonFace.m_to[0] = fromFaceIter->m_to[0];
             skeletonFace.m_to[1] = fromFaceIter->m_to[1];
             outFaceMap[toVertexHandle].push_back(skeletonFace);
             m_totalFace += 1;
 
-            skeletonFace.m_from = fromFaceIter->m_to[0];
             skeletonFace.m_to[0] = fromFaceIter->m_to[1];
             skeletonFace.m_to[1] = toVertexHandle;
             outFaceMap[fromFaceIter->m_to[0]].push_back(skeletonFace);
             m_totalFace += 1;
-
-            skeletonFace.m_from = fromFaceIter->m_to[1];
-            skeletonFace.m_to[0] = toVertexHandle;
-            skeletonFace.m_to[1] = fromFaceIter->m_to[0];
-            outFaceMap[fromFaceIter->m_to[1]].push_back(skeletonFace);
-            m_totalFace += 1;
         }
     }
+
     m_totalFace -= outFaceMap[fromVertexHandle].size();
     outFaceMap.erase(outFaceMap.find(fromVertexHandle));
 }
 
-void SkeletonExtraction::computeVertexMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap, OMT::VHandle vHandle) {
+void SkeletonExtraction::computeVertexMetric(Tri_Mesh *mesh,
+                                             std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
+                                             OMT::VHandle vHandle) {
     OMT::Point p = mesh->point(vHandle);
     double totalAdjacent = 0;
 
-    for (auto outHalfedgeIter = outHalfedgeMap[vHandle].begin(); outHalfedgeIter != outHalfedgeMap[vHandle].end(); ++outHalfedgeIter) {
+    for (auto outHalfedgeIter = outHalfedgeMap[vHandle].begin();
+         outHalfedgeIter != outHalfedgeMap[vHandle].end(); ++outHalfedgeIter) {
         OMT::Point p01 = (p - mesh->point(outHalfedgeIter->m_to));
         totalAdjacent += sqrt(p01 | p01);
     }
@@ -536,7 +603,8 @@ void SkeletonExtraction::computeVertexMetric(Tri_Mesh *mesh, std::map<OMT::VHand
     mesh->property(m_KTotal, vHandle) = totalAdjacent;
 }
 
-void SkeletonExtraction::computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap) {
+void SkeletonExtraction::computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em,
+                                            std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap) {
     // get one-ring
     OMT::Point toVertexPoint = mesh->point(em.m_to);
     Eigen::Vector4d toP(toVertexPoint[0], toVertexPoint[1], toVertexPoint[2], 1.0);
@@ -552,6 +620,69 @@ void SkeletonExtraction::computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em, s
 
     double F = m_wa * Fa + m_wb * Fb;
     em.m_metric = F;
+
+}
+
+void SkeletonExtraction::embeddingRefinement(Tri_Mesh *originalMesh, Tri_Mesh *mesh) {
+    // Correct the skeleton to tunnel center
+    std::map<int, std::set<int>> boundaries;
+    // first one is the collapse end vertex, second one is how many point is been collapsed to the collapse end vertex
+    for (int i = 0;i < m_vertexCollapseLabel.size(); ++i) {
+        int ancestor = FindAncestor(i);
+        if (boundaries.find(ancestor) == boundaries.end()) {
+            boundaries[ancestor] = std::set<int>();
+        }
+        boundaries[ancestor].insert(i);
+    }
+    // calculate displacement for each skeleton
+    std::map<OMT::VHandle, Eigen::Vector3d> skeletonDisplacementMap;
+    for (auto &boundary: boundaries) {
+        Eigen::Vector3d displacement(0, 0, 0);
+        double totalWeight = 0.0;
+        for (auto boundaryVertexHandleIter = boundary.second.begin(); boundaryVertexHandleIter != boundary.second.end();++boundaryVertexHandleIter) {
+            OMT::VHandle boundaryVertexHandle = mesh->vertex_handle(*boundaryVertexHandleIter);
+            OMT::Point laplacianPoint = mesh->point(boundaryVertexHandle);
+            Eigen::Vector3d laplacianP = Eigen::Vector3d(laplacianPoint[0], laplacianPoint[1], laplacianPoint[2]);
+            OMT::Point originalPoint = originalMesh->point(boundaryVertexHandle);
+            Eigen::Vector3d originalP = Eigen::Vector3d(originalPoint[0], originalPoint[1], originalPoint[2]);
+            std::set<OMT::EHandle> twoRingSet;
+            double weight = 0;
+
+            for (OMT::VOHEIter boundaryOutHalfedgeIter = mesh->voh_begin(boundaryVertexHandle); boundaryOutHalfedgeIter != mesh->voh_end(boundaryVertexHandle); ++boundaryOutHalfedgeIter) {
+                OMT::VHandle outVertexHandle = mesh->to_vertex_handle(*boundaryOutHalfedgeIter);
+                for (OMT::VOHEIter outHalfedgeOfOutVertexIter = mesh->voh_begin(outVertexHandle); outHalfedgeOfOutVertexIter != mesh->voh_end(outVertexHandle); ++outHalfedgeOfOutVertexIter) {
+                    twoRingSet.insert(mesh->edge_handle(*outHalfedgeOfOutVertexIter));
+                }
+            }
+
+            for (auto twoRingEdgehandle: twoRingSet) {
+                weight += mesh->calc_edge_length(twoRingEdgehandle);
+            }
+            totalWeight += weight;
+            displacement += weight * (laplacianP - originalP);
+        }
+        skeletonDisplacementMap[mesh->vertex_handle(boundary.first)] = (abs(totalWeight)<1e-8)? Eigen::Vector3d(0, 0, 0):(displacement/totalWeight);
+    }
+    // project skeleton to tunnel center according to displacement
+    for (auto &element: m_outHalfedgeMap) {
+        OMT::Point currentPoint = mesh->point(element.first);
+        Eigen::Vector3d currentP = Eigen::Vector3d(currentPoint[0], currentPoint[1], currentPoint[2]);
+        Eigen::Vector3d displacement = skeletonDisplacementMap[element.first];
+        for(auto toHalfedgeIter = element.second.begin();
+            toHalfedgeIter != element.second.end(); ++toHalfedgeIter) {
+            displacement += skeletonDisplacementMap[toHalfedgeIter->m_to];
+        }
+        displacement /= (element.second.size() + 1.0);
+        OMT::Point displacementVector = OMT::Point(displacement[0], displacement[1], displacement[2]);
+        mesh->set_point(element.first, currentPoint - displacementVector);
+    }
+}
+
+void SkeletonExtraction::UnionAncestor(int a, int b) {
+    m_vertexCollapseLabel[FindAncestor(b)] = FindAncestor(a);
+}
+int SkeletonExtraction::FindAncestor(int a) {
+    return m_vertexCollapseLabel[a]==a?a:m_vertexCollapseLabel[a]=FindAncestor(m_vertexCollapseLabel[a]);
 }
 
 void SkeletonExtraction::simplifyMesh() {
@@ -562,10 +693,15 @@ void SkeletonExtraction::simplifyMesh() {
     }
     wxLogMessage("Init success");
     int i = 0;
+    int remainVertices = 18;
     while (m_totalFace > 0) {
-        wxLogMessage("Collapsed to %u", i++);
+//        wxLogMessage("Collapsed to %u", i++);
         if (!collapseEdge(m_operateMesh, m_outHalfedgeMap, m_outFaceMap)) {
             wxLogMessage("Collapse to end");
+            break;
+        }
+        if (m_outHalfedgeMap.size() <= remainVertices) {
+            wxLogMessage("Collapse to remain %d vertices end", remainVertices);
             break;
         }
 //        easierCollapseEdge(m_operateMesh);
@@ -575,8 +711,8 @@ void SkeletonExtraction::simplifyMesh() {
 
     std::vector<uint32_t> edgeSkeletonIndices;
 
-    for(const auto &outHalfedgeList: m_outHalfedgeMap) {
-        for(const auto &outHalfedge: outHalfedgeList.second) {
+    for (const auto &outHalfedgeList: m_outHalfedgeMap) {
+        for (const auto &outHalfedge: outHalfedgeList.second) {
             edgeSkeletonIndices.push_back(outHalfedge.m_from.idx());
             edgeSkeletonIndices.push_back(outHalfedge.m_to.idx());
             m_operateMesh->m_edgeIndices += 2;
@@ -584,6 +720,9 @@ void SkeletonExtraction::simplifyMesh() {
     }
     wxLogMessage("Remain edge: %u", m_operateMesh->m_edgeIndices);
     updateSkeletonEBO(edgeSkeletonIndices);
+
+    embeddingRefinement(m_originalMesh, m_operateMesh);
+    updateSkeletonVBO();
 }
 
 void SkeletonExtraction::updateSkeletonEBO(std::vector<uint32_t> &edgeSkeletonIndices) {
@@ -594,6 +733,24 @@ void SkeletonExtraction::updateSkeletonEBO(std::vector<uint32_t> &edgeSkeletonIn
 
     // edge EBO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_operateMesh->m_edgeEbo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * edgeSkeletonIndices.size(), edgeSkeletonIndices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32_t) * edgeSkeletonIndices.size(), edgeSkeletonIndices.data(),
+                 GL_STATIC_DRAW);
+
+}
+
+void SkeletonExtraction::updateSkeletonVBO() {
+    glBindVertexArray(m_operateMesh->m_vao);
+
+    std::vector<Vec3f> vertices;
+    for(OMT::VIter v_it = m_operateMesh->vertices_begin(); v_it != m_operateMesh->vertices_end(); ++v_it) {
+        OMT::Point coord = m_operateMesh->point(*v_it);
+        vertices.push_back(Vec3f(coord[0], coord[1], coord[2]));
+    }
+
+    // Mesh VBO
+    glBindBuffer(GL_ARRAY_BUFFER, m_operateMesh->m_coordVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vec3f) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
 
 }

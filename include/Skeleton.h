@@ -7,6 +7,7 @@
 
 #include "OpenMeshDef.h"
 #include <vector>
+#include <unordered_map>
 
 class SKErrorMetric {
 public:
@@ -24,12 +25,24 @@ public:
         return m_metric < rhs.m_metric;
     }
 
+    bool operator==(const SKErrorMetric &rhs) const {
+        return m_from==rhs.m_from && m_to==rhs.m_to;
+    }
+
 private:
 };
 
+struct SKErrorMetricHasher
+{
+    std::size_t operator()(const SKErrorMetric& rhs) const
+    {
+        return rhs.m_from.idx() * 51000 + rhs.m_to.idx();
+    }
+};
+
+
 class SkeletonFace {
 public:
-    OMT::VHandle m_from;
     OMT::VHandle m_to[2];
 };
 
@@ -62,13 +75,13 @@ public:
     void initErrorMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
                          std::map<OMT::VHandle, std::vector<SkeletonFace>> &outFaceMap);
 
-    void propagateToTop(Tri_Mesh *mesh, int heapIdx);
-    void propagateToBottom(Tri_Mesh *mesh, int heapIdx);
+    void propagateToTop(int heapIdx);
+    void propagateToBottom(int heapIdx);
 
-    void insertEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric);
-    SKErrorMetric *getTopEdge(Tri_Mesh *mesh);
-    void deleteEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric);
-    void changeEdge(Tri_Mesh *mesh, SKErrorMetric *skErrorMetric);
+    void insertEdge(const SKErrorMetric &skErrorMetric);
+    bool getTopEdge(SKErrorMetric &skErrorMetric);
+    void deleteEdge(const SKErrorMetric &skErrorMetric);
+    void changeEdge(const SKErrorMetric &skErrorMetric);
 
     bool collapseEdge(Tri_Mesh *mesh,
                       std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap,
@@ -81,6 +94,12 @@ public:
     void computeVertexMetric(Tri_Mesh *mesh, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap, OMT::VHandle vHandle);
 
     void computeErrorMetric(Tri_Mesh *mesh, SKErrorMetric &em, std::map<OMT::VHandle, std::vector<SKErrorMetric>> &outHalfedgeMap);
+
+    void embeddingRefinement(Tri_Mesh *originalMesh, Tri_Mesh *mesh);
+    void UnionAncestor(int a, int b);
+    int FindAncestor(int a);
+    void updateSkeletonVBO();
+    std::vector<int> m_vertexCollapseLabel;
 
     //
     void simplifyMesh();
@@ -99,8 +118,8 @@ public:
     double m_initialAverageFaceArea;
 
     // Degenerate to line
-    std::vector<SKErrorMetric *> m_pQueue;
-    std::map<SKErrorMetric *, int> m_pQueueHeapIdx;
+    std::vector<SKErrorMetric > m_pQueue;
+    std::unordered_map<SKErrorMetric, int, SKErrorMetricHasher> m_pQueueHeapIdx;
 
     std::map<OMT::VHandle, std::vector<SKErrorMetric>> m_outHalfedgeMap;
     std::map<OMT::VHandle, std::vector<SkeletonFace>> m_outFaceMap;

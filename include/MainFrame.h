@@ -64,6 +64,7 @@ public:
     wxTextCtrl *m_wA;
     wxTextCtrl *m_wB;
     wxButton *m_skeletonToLine;
+    wxCheckBox *m_showJoint;
 
     Tri_Mesh *m_mesh = nullptr;
     MeshManager *m_meshManager = nullptr;
@@ -91,6 +92,8 @@ private:
 
     void OnSkeletonToLine(wxCommandEvent &event);
 
+    void OnShowJoint(wxCommandEvent &event);
+
     void OpenFile(wxCommandEvent &event);
 
     void OpenMeshFile(wxCommandEvent &event);
@@ -110,6 +113,7 @@ enum {
     BUTTON_Render,
     BUTTON_Skeleton,
     BUTTON_SkeletonToLine,
+    CHECKBOX_ShowJoint,
     TEXT_Field
 };
 
